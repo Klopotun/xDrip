@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>freak-butik · Ателье</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Onest:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F2F2F7;
+  --s1:#FFFFFF;
+  --s2:#F2F2F7;
+  --s3:#E5E5EA;
+  --bd:#E5E5EA;
+  --tx:#1C1C1E;
+  --dm:#8E8E93;
+  --d2:#C7C7CC;
+  --ac:#007AFF;
+  --ac-light:rgba(0,122,255,.1);
+  --gn:#34C759;
+  --gn-light:rgba(52,199,89,.1);
+  --red:#FF3B30;--orange:#FF9500;
+  --red-light:rgba(255,59,48,.08);
+  --orange:#FF9500;
+}
+html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Onest',sans-serif;font-size:16px;-webkit-font-smoothing:antialiased}
+.scr{min-height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
+
+/* HEADER */
+.hdr{
+  background:rgba(255,255,255,.85);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--bd);
+  padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;position:sticky;top:0;z-index:10;
+}
+.hdr-t{font-size:17px;font-weight:700;letter-spacing:-.3px;color:var(--tx)}
+.hdr-sub{font-size:12px;color:var(--dm);margin-top:1px}
+.exit-btn,.back-btn{background:none;border:none;color:var(--ac);cursor:pointer;font-size:15px;font-family:inherit;padding:4px 0;font-weight:400}
+
+/* TABS — iOS segment style */
+.tabs{
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bd);
+  flex-shrink:0;position:sticky;top:57px;z-index:9;
+  display:flex;overflow-x:auto;padding:0 16px;
+}
+.tab{
+  flex:none;padding:10px 14px;background:none;border:none;
+  border-bottom:2px solid transparent;color:var(--dm);
+  cursor:pointer;font-size:14px;font-family:inherit;
+  white-space:nowrap;font-weight:500;transition:color .15s;
+}
+.tab.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+/* CONTENT */
+.cnt{flex:1;padding:16px}
+
+/* CARDS */
+.card{
+  background:var(--s1);
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  border:none;
+}
+
+/* BUTTONS */
+.btn{
+  background:var(--ac);border:none;color:#fff;
+  padding:15px;border-radius:14px;
+  font-size:16px;font-weight:600;cursor:pointer;
+  width:100%;font-family:inherit;letter-spacing:-.2px;
+  transition:opacity .15s;
+}
+.btn:active{opacity:.8}
+.btn-sm{
+  background:var(--ac);border:none;color:#fff;
+  padding:8px 16px;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;
+  font-family:inherit;white-space:nowrap;
+}
+.btn-sm:active{opacity:.8}
+.btn-sec{
+  background:var(--ac-light);border:none;color:var(--ac);
+  padding:10px 18px;border-radius:12px;
+  font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.btn-sec:active{opacity:.7}
+.btn-ghost{
+  background:var(--s1);border:none;color:var(--ac);
+  padding:15px;border-radius:14px;font-size:16px;
+  font-weight:500;cursor:pointer;width:100%;font-family:inherit;
+  margin-top:10px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07);
+}
+.btn-ghost:active{opacity:.7}
+.btn-del{
+  background:none;border:none;color:var(--d2);
+  cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;
+}
+.btn-del:active{color:var(--red)}
+
+/* INPUTS */
+.inp{
+  background:var(--s2);border:none;color:var(--tx) !important;
+  padding:12px 14px;border-radius:12px;
+  font-size:16px;width:100%;font-family:inherit;
+  outline:none;-webkit-appearance:none;appearance:none;
+  transition:box-shadow .2s;
+  -webkit-text-fill-color:var(--tx);
+}
+.inp::placeholder{color:var(--dm);-webkit-text-fill-color:var(--dm)}
+/* Force dark text in all input states */
+input[list]{color:#1C1C1E !important;-webkit-text-fill-color:#1C1C1E !important}
+.inp:focus{box-shadow:0 0 0 3px rgba(0,122,255,.25)}
+.inp[type=number]{-moz-appearance:textfield}
+.inp[type=number]::-webkit-inner-spin-button,.inp[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+select.inp{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238E8E93'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:20px;padding-right:36px;
+}
+select.inp option{background:#fff;color:#1C1C1E}
+select.inp{color:#1C1C1E}
+.lbl{font-size:13px;font-weight:500;color:var(--dm);display:block;margin-bottom:6px;letter-spacing:-.1px}
+.fg{margin-bottom:14px}
+.row2{display:flex;gap:10px;margin-bottom:14px}
+.row2>.fg{flex:1;margin-bottom:0}
+
+/* AUTOCOMPLETE */
+.ac-wrap{position:relative}
+.ac-drop{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--s1);border-radius:14px;
+  max-height:220px;overflow-y:auto;z-index:100;
+  box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  display:none;
+}
+.ac-drop.open{display:block}
+.ac-item{
+  padding:11px 14px;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--bd);font-size:14px;user-select:none;
+}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item:active{background:var(--ac-light)}
+.ac-p{font-size:13px;color:var(--gn);white-space:nowrap;font-weight:600}
+
+/* TOTAL BOX */
+.total-box{
+  background:var(--gn-light);border-radius:14px;
+  padding:14px 16px;display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:14px;
+}
+
+/* MONEY + COLORS */
+.mono{font-variant-numeric:tabular-nums;font-weight:600}
+.c-gn{color:var(--gn)}.c-ac{color:var(--red)}.c-dm{color:var(--dm)}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat-cell{
+  background:var(--s1);border-radius:14px;
+  padding:12px 10px;text-align:center;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.stat-lbl{font-size:10px;color:var(--dm);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.stat-val{font-size:16px;font-weight:700;letter-spacing:-.3px}
+
+/* PROGRESS */
+.progress{height:5px;background:var(--s3);border-radius:3px;margin-top:8px;overflow:hidden}
+.progress-bar{height:100%;background:var(--ac);border-radius:3px;transition:width .3s}
+
+/* EMPTY */
+.empty{text-align:center;padding:44px 20px;color:var(--dm)}
+
+/* SECTION TITLE */
+.sec-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--dm);margin:20px 0 8px;padding:0 4px}
+
+/* INFO BAR */
+.info-bar{
+  padding:12px 14px;background:var(--ac-light);
+  border-radius:12px;margin-bottom:14px;
+  font-size:14px;color:var(--ac);font-weight:500;
+}
+
+/* PIN */
+.pin-dots{display:flex;gap:20px;justify-content:center;margin:32px 0}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:var(--d2);transition:background .15s,transform .15s}
+.pin-dot.on{background:var(--ac);transform:scale(1.1)}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;margin:0 auto}
+.num-btn{
+  padding:18px;font-size:24px;font-weight:500;
+  background:var(--s1);border:none;border-radius:50%;
+  color:var(--tx);cursor:pointer;font-family:inherit;
+  touch-action:manipulation;user-select:none;
+  box-shadow:0 2px 8px rgba(0,0,0,.1);
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+}
+.num-btn:active{background:var(--s3);transform:scale(.94)}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:200;backdrop-filter:blur(4px)}
+.modal{
+  background:var(--s1);border-radius:24px 24px 0 0;
+  padding:8px 20px 32px;width:100%;max-width:480px;margin:0 auto;
+  max-height:92vh;overflow-y:auto;
+}
+.modal::before{content:'';display:block;width:36px;height:4px;background:var(--d2);border-radius:2px;margin:8px auto 20px}
+.modal-t{font-size:20px;font-weight:700;margin-bottom:16px;letter-spacing:-.3px}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:rgba(28,28,30,.9);color:#fff;
+  padding:11px 20px;border-radius:20px;
+  font-size:14px;font-weight:500;z-index:500;
+  opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;
+  backdrop-filter:blur(10px);
+}
+.toast.show{opacity:1}
+
+/* LOADER */
+.loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.ld-row{display:flex;gap:8px}
+.ld-dot{width:8px;height:8px;border-radius:50%;background:var(--ac);animation:ld 1.2s ease-in-out infinite}
+.ld-dot:nth-child(2){animation-delay:.2s}.ld-dot:nth-child(3){animation-delay:.4s}
+@keyframes ld{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+/* Sparkle milestone */
+@keyframes sparkle-pop{0%{transform:scale(0) rotate(0deg);opacity:1}100%{transform:scale(1.5) rotate(360deg);opacity:0}}
+@keyframes milestone-glow{0%,100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}50%{box-shadow:0 0 32px 8px rgba(52,199,89,.5)}}
+@keyframes counter-roll{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes star-float{0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-80px) scale(0);opacity:0}}
+@keyframes record-shine{0%{background-position:200% center}100%{background-position:-200% center}}
+
+.milestone-overlay{position:fixed;inset:0;z-index:800;pointer-events:none;overflow:hidden}
+.spark{position:absolute;font-size:20px;animation:star-float 1.2s ease-out forwards}
+.milestone-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#34C759,#007AFF);
+  color:#fff;padding:14px 24px;border-radius:20px;font-size:16px;font-weight:700;z-index:810;
+  animation:counter-roll .4s ease;box-shadow:0 8px 32px rgba(52,199,89,.4)}
+
+.record-banner{background:linear-gradient(135deg,#FFD60A,#FF9500);background-size:300% 100%;
+  animation:record-shine 3s linear infinite;border-radius:14px;padding:14px 16px;margin-bottom:12px;
+  display:flex;align-items:center;gap:12px;color:#fff}
+.goal-bar{height:8px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:8px}
+.goal-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ac),#FF9500);transition:width .6s ease}
+.early-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(255,45,85,.1);color:#FF2D55;
+  font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;margin-left:6px}
+.rolling-num{animation:counter-roll .3s ease}
+@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+.shake{animation:shk .35s}
+</style>
+</head>
+<body>
+<div id="loader" class="loader">
+  <div style="font-size:28px;font-weight:700;color:var(--ac);letter-spacing:-.5px">АТЕЛЬЕ</div>
+  <div class="ld-row"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
+  <div style="font-size:12px;color:var(--dm)">загрузка…</div>
+</div>
+<div id="app" style="display:none"></div>
+<div class="toast" id="toast"></div>
+<datalist id="prod_list"></datalist>
+<div id="picker_modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:flex-end">
+  <div style="background:#F2F2F7;border-radius:24px 24px 0 0;width:100%;max-width:480px;margin:0 auto;height:80vh;display:flex;flex-direction:column">
+    <div style="padding:16px 20px 10px;display:flex;align-items:center;gap:12px;background:#fff;border-radius:24px 24px 0 0;border-bottom:1px solid #E5E5EA">
+      <input id="picker_search" type="search" placeholder="Поиск изделия…"
+        style="flex:1;background:#F2F2F7;border:none;border-radius:10px;padding:10px 14px;font-size:16px;color:#1C1C1E;outline:none;-webkit-appearance:none"
+        oninput="filterPicker(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button onclick="closeProductPicker()" style="background:none;border:none;color:#007AFF;font-size:16px;cursor:pointer;padding:4px;white-space:nowrap">Отмена</button>
+    </div>
+    <div id="picker_list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+  </div>
+</div>
+<div id="spinner" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.6);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div style="width:44px;height:44px;border:3px solid #E5E5EA;border-top-color:#007AFF;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div id="spinner_txt" style="font-size:13px;color:#8E8E93;font-weight:500"></div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+const SCRIPT_URL = '<?= scriptUrl ?>';
+const ADMIN_PIN  = '4242';
+const MO=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const getMon=(d=new Date())=>{
+  // Use explicit year/month/date to avoid timezone midnight shift
+  const yr=d.getFullYear(),mo=d.getMonth(),dt=d.getDate(),dy=d.getDay();
+  const diff=dy===0?6:dy-1; // days since Monday
+  return new Date(yr,mo,dt-diff); // local midnight, no UTC conversion
+};
+const wkL=d=>`${d.getDate()} ${MO[d.getMonth()]} ${d.getFullYear()}`;
+const NOW_WK=wkL(getMon());
+const fmt=n=>(n||0).toLocaleString('ru');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const normPhone=p=>String(p||'').replace(/\D/g,'');
+const WEEKS=(()=>{const w=[],m=getMon();for(let i=-12;i<=8;i++){const d=new Date(m);d.setDate(d.getDate()+i*7);w.push(wkL(d));}return w;})();
+// Working days between two ISO date strings (Mon-Fri only)
+function workingDaysSince(isoStr){
+  if(!isoStr)return 0;
+  const start=new Date(isoStr);const now=new Date();
+  let count=0;const d=new Date(start);
+  while(d<now){d.setDate(d.getDate()+1);const w=d.getDay();if(w>=1&&w<=5)count++;}
+  return count;
+}
+
+// Urgency thresholds by order type label
+function urgencyThresholds(orderType){
+  const ot=(orderType||'').toLowerCase();
+  if(ot.includes('1-2'))  return{warn:1,hot:2};
+  if(ot.includes('3-5'))  return{warn:3,hot:5};
+  if(ot.includes('5 дн')) return{warn:4,hot:5};
+  if(ot.includes('10 дн'))return{warn:8,hot:10};
+  if(ot.includes('15 дн'))return{warn:12,hot:15};
+  return{warn:10,hot:30}; // default — запуск/проработка/etc
+}
+
+// Returns background color for batch card based on age and urgency
+function batchBg(batch){
+  const wd=workingDaysSince(batch.created_at);
+  const t=urgencyThresholds(batch.order_type);
+  if(wd>=t.hot) return'#ff69b4';
+  if(wd>=t.warn)return'#ffe4e1';
+  return'';
+}
+
+const OT=[
+  {l:"запуск (100%)",c:1},{l:"проработка (200%)",c:2},
+  {l:"заказ из массовки (100%)",c:1},{l:"заказ индив (120%)",c:1.2},
+  {l:"заказ без примерки (140%)",c:1.4},{l:"заказ с примеркой (170%)",c:1.7},
+  {l:"заказ из архива (130%)",c:1.3},{l:"срочный 15 дней (120%)",c:1.2},
+  {l:"срочный 10 дней (130%)",c:1.3},{l:"срочный 5 дней (150%)",c:1.5},
+  {l:"срочный 3-5 дней (170%)",c:1.7},{l:"срочный 1-2 дня (200%)",c:2},
+  {l:"замена цвета (140%)",c:1.4},{l:"цвет на белый (150%)",c:1.5},
+];
+
+// ═══ STATE ═══════════════════════════════════════════════════════
+const S={
+  view:'home', user:null, week:NOW_WK,
+  pinVal:'', pinShake:false,
+  adminTab:'summary', detailId:null,
+  tailorTab:'batches', mixedTab:'daily',
+  prodOpen:false, prodPeriod:'week', pSearch:'',
+  employees:[], batches:[], deliveries:[], dayLogs:[], payments:[], products:[],
+};
+
+// ═══ API ══════════════════════════════════════════════════════════
+// Global submission lock — prevents double-tap on ANY action
+let _busy = false;
+function setBusy(v){
+  _busy=v;
+  const sp=document.getElementById('spinner');
+  if(sp)sp.style.pointerEvents=v?'all':'none';
+}
+async function safeApi(action, payload={}){
+  if(_busy)return null;
+  setBusy(true);
+  try{ return await api(action,payload); }
+  finally{ setBusy(false); }
+}
+
+const SPIN_MSGS = {
+  getAll:'Загрузка…', addEmployee:'Сохранение…', updEmployee:'Сохранение…',
+  addBatch:'Добавление…', delBatch:'Удаление…',
+  addDelivery:'Запись сдачи…', delDelivery:'Удаление…',
+  addDayLog:'Сохранение…', delDayLog:'Удаление…',
+  addPayment:'Выплата…', delPayment:'Удаление…',
+  addProduct:'Добавление…', updProduct:'Сохранение…', hideProduct:'Удаление…',
+};
+let _spinCount=0;
+function showSpinner(msg){
+  _spinCount++;
+  const el=document.getElementById('spinner');
+  if(el){el.style.display='flex';}
+  const t=document.getElementById('spinner_txt');
+  if(t)t.textContent=msg||'';
+}
+function hideSpinner(){
+  _spinCount=Math.max(0,_spinCount-1);
+  if(_spinCount===0){const el=document.getElementById('spinner');if(el)el.style.display='none';}
+}
+
+async function api(action, payload={}) {
+  const msg=SPIN_MSGS[action]||'';
+  if(msg)showSpinner(msg);
+  try{
+    const r = await fetch(SCRIPT_URL, {method:'POST', body:JSON.stringify({action,...payload}), redirect:'follow'});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'Ошибка сервера');
+    return j.data;
+  }finally{
+    if(msg)hideSpinner();
+  }
+}
+
+// ═══ TOAST ════════════════════════════════════════════════════════
+let _tt;
+function toast(msg){const e=document.getElementById('toast');if(!e)return;clearTimeout(_tt);e.textContent=msg;e.className='toast show';_tt=setTimeout(()=>e.className='toast',2200);}
+
+// ═══ DOM HELPERS ══════════════════════════════════════════════════
+const $=id=>document.getElementById(id);
+const setH=(id,h)=>{const e=$(id);if(e)e.innerHTML=h;};
+const setT=(id,t)=>{const e=$(id);if(e)e.textContent=t;};
+const show=(id,v=true)=>{const e=$(id);if(e)e.style.display=v?'':'none';};
+
+// ═══ STATS ════════════════════════════════════════════════════════
+function getStats(empId,wk){
+  const emp=S.employees.find(e=>String(e.id)===String(empId));
+  if(!emp)return{accrued:0,paid:0,owed:0,totalOwed:0,totalPaid:0};
+  const isP=emp.tailor_type==='piece';
+  const accrued=isP
+    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&d.week===wk).reduce((s,d)=>s+Number(d.total||0),0)
+    :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)&&l.week===wk).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
+  const paid=S.payments.filter(p=>String(p.tailor_id)===String(empId)&&p.week===wk).reduce((s,p)=>s+Number(p.amount||0),0);
+  const totalAccrued=isP
+    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)).reduce((s,d)=>s+Number(d.total||0),0)
+    :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
+  const totalPaid=S.payments.filter(p=>String(p.tailor_id)===String(empId)).reduce((s,p)=>s+Number(p.amount||0),0);
+  return{accrued,paid,owed:accrued-paid,totalOwed:totalAccrued-totalPaid,totalPaid};
+}
+
+function getSrc(){return S.products.length?S.products.map(p=>({n:String(p.name),p:Number(p.price||0)})):[];}
+
+// ── GOALS (localStorage, personal) ───────────────────────────
+function goalKey(empId){return 'goal_'+empId;}
+function loadGoal(empId){try{const g=localStorage.getItem(goalKey(empId));return g?JSON.parse(g):null;}catch{return null;}}
+function saveGoal(empId,g){try{localStorage.setItem(goalKey(empId),JSON.stringify(g));}catch{}}
+
+// ── RECORD OF THE WEEK ────────────────────────────────────────
+function getPersonalRecord(empId){
+  // Find the best week ever for THIS tailor (by items qty)
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  const curMon=getMon();
+  const lastMon=new Date(curMon.getFullYear(),curMon.getMonth(),curMon.getDate()-7);
+  const lastWkStr=wkL(lastMon);
+
+  // Group all deliveries by week for this tailor
+  const byWeek={};
+  S.deliveries.filter(d=>String(d.tailor_id)===String(empId)).forEach(d=>{
+    const w=d.week||'—';
+    if(!byWeek[w])byWeek[w]={qty:0,total:0};
+    byWeek[w].qty+=Number(d.qty||0);
+    byWeek[w].total+=Number(d.total||0);
+  });
+
+  const weeks=Object.keys(byWeek);
+  if(!weeks.length)return null;
+
+  // Personal best ever (excluding current week)
+  const pastWeeks=weeks.filter(w=>w!==S.week);
+  if(!pastWeeks.length)return null;
+  const bestWk=pastWeeks.sort((a,b)=>byWeek[b].qty-byWeek[a].qty)[0];
+  const best=byWeek[bestWk];
+
+  // Last week stats
+  const lastWk=byWeek[lastWkStr]||{qty:0,total:0};
+
+  // Current week so far
+  const curQty=S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&d.week===S.week).reduce((s,d)=>s+Number(d.qty||0),0);
+
+  return{
+    bestQty:best.qty,
+    bestTotal:best.total,
+    bestWeek:bestWk,
+    lastQty:lastWk.qty,
+    lastTotal:lastWk.total,
+    curQty,
+    isRecord:curQty>0&&curQty>=best.qty,
+  };
+}
+
+// ── EARLY DELIVERY CHECK ──────────────────────────────────────
+function isEarlyDelivery(delivery,batch){
+  if(!batch||!batch.created_at)return false;
+  const t=urgencyThresholds(batch.order_type||'');
+  const wd=workingDaysSince(batch.created_at);
+  return wd<t.warn; // delivered before the warning threshold
+}
+
+// ── MILESTONE SPARKLE ─────────────────────────────────────────
+const MILESTONES=[10000,20000,30000,40000,50000,60000,70000,80000,90000,100000];
+function checkMilestone(oldTotal,newTotal){
+  return MILESTONES.find(m=>oldTotal<m&&newTotal>=m)||null;
+}
+function triggerSparkle(milestone){
+  const overlay=document.createElement('div');
+  overlay.className='milestone-overlay';
+  const emojis=['✨','⭐','💫','🌟','💥','🎉','💎'];
+  for(let i=0;i<24;i++){
+    const s=document.createElement('div');
+    s.className='spark';
+    s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    s.style.left=Math.random()*100+'%';
+    s.style.top=(20+Math.random()*60)+'%';
+    s.style.animationDelay=(Math.random()*0.8)+'s';
+    s.style.fontSize=(14+Math.random()*16)+'px';
+    overlay.appendChild(s);
+  }
+  document.body.appendChild(overlay);
+  const mt=document.createElement('div');
+  mt.className='milestone-toast';
+  mt.textContent='🎉 '+fmt(milestone)+' ₽ — новый рекорд!';
+  document.body.appendChild(mt);
+  setTimeout(()=>{overlay.remove();mt.remove();},2500);
+}
+
+// ── ROLLING NUMBER ANIMATION ──────────────────────────────────
+function animateCounter(el,from,to,duration=800){
+  if(!el)return;
+  const start=Date.now();
+  const tick=()=>{
+    const elapsed=Date.now()-start;
+    const progress=Math.min(elapsed/duration,1);
+    // ease out
+    const eased=1-Math.pow(1-progress,3);
+    const current=Math.round(from+(to-from)*eased);
+    el.textContent=fmt(current)+' ₽';
+    if(progress<1)requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// ═══ RENDER ENGINE ════════════════════════════════════════════════
+// KEY RULE: render() only called on screen/tab changes, NEVER from oninput
+function render(){
+  const app=$(  'app');if(!app)return;
+  if(S.view==='home')   app.innerHTML=buildHome();
+  else if(S.view==='pin')    app.innerHTML=buildPin();
+  else if(S.view==='tailor') app.innerHTML=buildTailor();
+  else if(S.view==='admin')  app.innerHTML=buildAdmin();
+}
+
+// ═══ HOME ════════════════════════════════════════════════════════
+function buildHome(){
+  return`<div class="scr" style="justify-content:center;align-items:center;padding:30px 20px;min-height:100vh">
+    <div style="text-align:center;margin-bottom:36px">
+      <div style="font-size:34px;font-weight:700;color:var(--tx);letter-spacing:-.5px">АТЕЛЬЕ</div>
+      <div style="font-size:14px;color:var(--dm);margin-top:4px;font-weight:400">freak-butik · учёт выпуска</div>
+    </div>
+    <div style="width:100%;max-width:380px">
+      <div class="fg"><label class="lbl">Телефон</label>
+        <input class="inp" type="tel" id="lph" placeholder="79001234567" inputmode="numeric" autocomplete="tel">
+      </div>
+      <div class="fg"><label class="lbl">Пароль</label>
+        <input class="inp" type="password" id="lpw" placeholder="••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="lerr" style="color:var(--ac);font-size:13px;margin-bottom:12px;display:none"></div>
+      <button class="btn" onclick="doLogin()">ВОЙТИ</button>
+      <button class="btn-ghost" onclick="S.view='pin';render()">👑 &nbsp;Администратор</button>
+    </div>
+  </div>`;
+}
+
+function doLogin(){
+  const ph=normPhone($('lph')?.value||'');
+  const pw=($('lpw')?.value||'').trim();
+  // Only active employees can log in
+  const emp=S.employees.find(e=>{
+    if(e.is_active==='FALSE'||e.is_active===false)return false;
+    const phoneOk=normPhone(String(e.phone||''))===ph;
+    const stored=String(e.password||'');
+    const passOk=stored===pw||stored.padStart(pw.length,'0')===pw;
+    return phoneOk&&passOk;
+  });
+  if(!emp){
+    const err=$('lerr');
+    if(err){err.textContent='Неверный телефон или пароль';err.style.display='';}
+    return;
+  }
+  S.user=emp;S.view='tailor';S.tailorTab='batches';S.mixedTab='daily';render();
+}
+
+// ═══ PIN ══════════════════════════════════════════════════════════
+function buildPin(){
+  const dots=[0,1,2,3].map(i=>`<div class="pin-dot ${i<S.pinVal.length?'on':''}"></div>`).join('');
+  const nums=["1","2","3","4","5","6","7","8","9","","0","⌫"].map(k=>
+    k===''?'<div></div>':`<button class="num-btn" onclick="pinKey('${k}')">${k}</button>`
+  ).join('');
+  return`<div class="scr" style="align-items:center;padding:36px 20px;min-height:100vh">
+    <div style="width:100%;max-width:320px">
+      <button class="back-btn" onclick="S.view='home';render()">← назад</button>
+      <div style="text-align:center;margin:24px 0 0">
+        <div style="font-size:24px;font-weight:700;letter-spacing:-.3px">АДМИНИСТРАТОР</div>
+        <div style="font-size:13px;color:var(--dm);margin-top:5px">введи PIN</div>
+      </div>
+      <div class="pin-dots ${S.pinShake?'shake':''}">${dots}</div>
+      <div class="numpad">${nums}</div>
+    </div>
+  </div>`;
+}
+function pinKey(k){
+  if(k==='⌫'){S.pinVal=S.pinVal.slice(0,-1);render();return;}
+  if(S.pinVal.length>=4)return;
+  S.pinVal+=k;render();
+  if(S.pinVal.length===4){
+    setTimeout(()=>{
+      if(S.pinVal===ADMIN_PIN){S.view='admin';S.pinVal='';render();}
+      else{S.pinShake=true;S.pinVal='';render();setTimeout(()=>{S.pinShake=false;render();},400);}
+    },120);
+  }
+}
+
+// ═══ TAILOR SCREEN ════════════════════════════════════════════════
+function buildTailor(){
+  const u=S.user;if(!u)return buildHome();
+  const tp=u.tailor_type;
+  const tabs=tp==='mixed'
+    ?`<button class="tab ${S.mixedTab==='daily'?'on':''}" onclick="S.mixedTab='daily';renderTailorContent()">Кройщик</button>
+       <button class="tab ${S.mixedTab==='positions'?'on':''}" onclick="S.mixedTab='positions';renderTailorContent()">Позиции</button>
+       <button class="tab ${S.mixedTab==='salary'?'on':''}" onclick="S.mixedTab='salary';renderTailorContent()">Зарплата</button>`
+    :tp==='piece'
+    ?`<button class="tab ${S.tailorTab==='batches'?'on':''}" onclick="S.tailorTab='batches';renderTailorContent()">Мои пачки</button>
+      <button class="tab ${S.tailorTab==='delivered'?'on':''}" onclick="S.tailorTab='delivered';renderTailorContent()">Сдано</button>
+      <button class="tab ${S.tailorTab==='salary'?'on':''}" onclick="S.tailorTab='salary';renderTailorContent()">Зарплата</button>
+      <button class="tab ${S.tailorTab==='goals'?'on':''}" id="tab_goals_btn" onclick="S.tailorTab='goals';renderTailorContent()"><span>🎯 Цели</span></button>`
+    :`<button class="tab ${S.tailorTab==='batches'?'on':''}" onclick="S.tailorTab='batches';renderTailorContent()">Мои дни</button>
+      <button class="tab ${S.tailorTab==='delivered'?'on':''}" onclick="S.tailorTab='delivered';renderTailorContent()">История</button>
+      <button class="tab ${S.tailorTab==='salary'?'on':''}" onclick="S.tailorTab='salary';renderTailorContent()">Зарплата</button>
+      <button class="tab ${S.tailorTab==='goals'?'on':''}" id="tab_goals_btn" onclick="S.tailorTab='goals';renderTailorContent()"><span>🎯 Цели</span></button>`;
+  return`<div class="scr">
+    <div class="hdr">
+      <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${S.week}</div></div>
+      <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
+    </div>
+    <div class="tabs" id="tailor_tabs">${tabs}</div>
+    <div id="tailor_record"></div>
+    <div class="cnt" id="tailor_cnt"></div>
+    <div id="tailor_modal"></div>
+  </div>`;
+}
+function renderRecordBanner(u){
+  const el=document.getElementById('tailor_record');
+  if(!el){return;}
+  const rec=getPersonalRecord(u.id);
+  if(!rec){el.innerHTML='';return;}
+
+  if(rec.isRecord){
+    // Currently beating personal best this week!
+    el.innerHTML=`<div style="padding:12px 16px 0">
+      <div class="record-banner">
+        <div style="font-size:28px">🏆</div>
+        <div>
+          <div style="font-weight:700;font-size:15px">Личный рекорд!</div>
+          <div style="font-size:12px;opacity:.9">Ты побила свой рекорд! ${rec.curQty} шт — это твой лучший результат за неделю 🎉</div>
+        </div>
+      </div>
+    </div>`;
+  } else if(rec.lastQty>0){
+    // Show last week vs personal best as motivation
+    const gap=rec.bestQty-rec.curQty;
+    const pct=rec.bestQty>0?Math.round(rec.curQty/rec.bestQty*100):0;
+    el.innerHTML=`<div style="padding:12px 16px 0">
+      <div style="background:var(--s1);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:13px;font-weight:600">⭐ Личный рекорд</div>
+          <div style="font-size:12px;color:var(--dm)">${rec.bestQty} шт · ${rec.bestWeek}</div>
+        </div>
+        <div class="goal-bar"><div class="goal-bar-fill" style="width:${pct}%"></div></div>
+        <div style="font-size:12px;color:var(--dm);margin-top:5px">
+          Сейчас: ${rec.curQty} шт${gap>0?' · до рекорда ещё '+gap+' шт':''}
+          ${rec.lastQty>0?' · на прошлой неделе: '+rec.lastQty+' шт':''}
+        </div>
+      </div>
+    </div>`;
+  } else {
+    el.innerHTML='';
+  }
+}
+
+function renderTailorContent(){
+  const u=S.user;if(!u)return;
+  const tp=u.tailor_type;
+  // update tabs highlight
+  document.querySelectorAll('#tailor_tabs .tab').forEach((el,i)=>{
+    const targets=tp==='mixed'?['daily','positions','salary']:tp==='piece'?['batches','delivered','salary','goals']:['batches','delivered','salary','goals'];
+    const cur=tp==='mixed'?S.mixedTab:S.tailorTab;
+    el.className='tab '+(cur===targets[i]?'on':'');
+  });
+  let html='';
+  if(tp==='piece'){
+    if(S.tailorTab==='batches')    html=buildPieceBatches(u);
+    else if(S.tailorTab==='delivered') html=buildTailorHistory(u);
+    else if(S.tailorTab==='goals') html=buildGoals(u);
+    else                           html=buildTailorSalary(u);
+  } else if(tp==='daily'){
+    if(S.tailorTab==='batches')    html=buildDailyForm(u);
+    else if(S.tailorTab==='delivered') html=buildDailyHistory(u);
+    else if(S.tailorTab==='goals') html=buildGoals(u);
+    else                           html=buildTailorSalary(u);
+  } else {
+    html=S.mixedTab==='daily'?buildDailyForm(u):S.mixedTab==='positions'?buildPositions(u):buildTailorSalary(u);
+  }
+  setH('tailor_cnt',html);
+  if(S.user){
+    renderRecordBanner(S.user);
+    // Animate goals tab fill
+    requestAnimationFrame(()=>{
+      const btn=document.getElementById('tab_goals_btn');
+      if(!btn||!S.user)return;
+      const pct=getGoalProgress(S.user);
+      // Remove old fill
+      const old=btn.querySelector('.tab-fill');
+      if(old)old.remove();
+      if(pct>0){
+        const fill=document.createElement('div');
+        fill.className='tab-fill';
+        fill.style.width='0%';
+        btn.insertBefore(fill,btn.firstChild);
+        requestAnimationFrame(()=>{fill.style.width=pct+'%';});
+        // Also animate the goal bar inside the goals tab if visible
+        const gb=document.getElementById('goal_bar_fill');
+        if(gb)setTimeout(()=>{gb.style.width=pct+'%';},100);
+        // Change label if near/at goal
+        const span=btn.querySelector('span');
+        if(span){
+          if(pct>=100)span.textContent='🏆 Цели';
+          else if(pct>=80)span.textContent='🔥 Цели';
+          else span.textContent='🎯 Цели';
+        }
+      }
+    });
+  }
+}
+
+// ── PIECE BATCHES ─────────────────────────────
+function buildPieceBatches(u){
+  const ab=S.batches.filter(b=>String(b.tailor_id)===String(u.id)&&!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total)).sort((a,b)=>a.created_at<b.created_at?-1:1);
+  if(!ab.length)return`<div class="empty"><div style="font-size:36px;margin-bottom:12px">📦</div><div>Нет активных пачек</div><div style="font-size:12px;margin-top:8px">Руководитель назначит пачки</div></div>`;
+  return ab.map(b=>{
+    const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
+    const pct=Math.round((Number(b.qty_delivered||0)/Number(b.qty_total))*100);
+    const _bg=batchBg(b);
+    return`<div class="card" ${_bg?`style="background:${_bg};border-color:${_bg}"`:''}> 
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:15px;margin-bottom:2px">${b.product}</div>
+          <div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · ${b.order_type||''}</div>
+          <div style="font-size:12px;color:var(--dm);margin-top:2px">за шт: <span class="mono c-gn">${fmt(Math.round(Number(b.price||0)*Number(b.order_coeff||1)))} ₽</span></div>
+          ${b.note?`<div style="font-size:12px;color:var(--dm);margin-top:2px">${b.note}</div>`:''}
+          <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--dm);margin-top:5px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · осталось <strong>${rem}</strong></div>
+        </div>
+        <button class="btn-sm" onclick="openDeliverModal('${b.id}')">Сдать</button>
+      </div>
+    </div>`;
+  }).join('')+`<div style="text-align:center;font-size:12px;color:var(--dm);margin-top:8px">Завершённые пачки скрыты</div>`;
+}
+
+// ── POSITIONS (Nastya) ────────────────────────
+function buildPositions(u){
+  const pos=S.batches.filter(b=>String(b.tailor_id)===String(u.id)&&b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
+  if(!pos.length)return`<div class="empty"><div style="font-size:36px;margin-bottom:12px">📋</div><div>Нет активных позиций</div></div>`;
+  return pos.map(b=>{
+    const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
+    const pct=Math.round((Number(b.qty_delivered||0)/Number(b.qty_total))*100);
+    const _bg=batchBg(b);
+    return`<div class="card" ${_bg?`style="background:${_bg};border-color:${_bg}"`:''}> 
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:15px;margin-bottom:2px">${b.product}</div>
+          <div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · ${b.order_type||''}</div>
+          ${b.note?`<div style="font-size:12px;color:var(--dm);margin-top:2px">${b.note}</div>`:''}
+          <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--dm);margin-top:5px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · осталось <strong>${rem}</strong></div>
+        </div>
+        <button class="btn-sm" onclick="openDeliverModal('${b.id}')">Сдать</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── DAILY FORM ────────────────────────────────
+function buildDailyForm(u){
+  const logs=S.dayLogs.filter(l=>String(l.tailor_id)===String(u.id)&&l.week===S.week).sort((a,b)=>a.created_at<b.created_at?-1:1);
+  const totDays=logs.reduce((s,l)=>s+Number(l.days||0),0);
+  const totMoney=logs.reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0),0);
+  const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
+  return`<div>
+    <div class="fg"><label class="lbl">Неделя</label>
+      <select class="inp" onchange="S.week=this.value;renderTailorContent()">${wkOpts}</select>
+    </div>
+    <div class="info-bar">Ставка: <span class="mono">${fmt(Number(u.rate))} ₽/день</span></div>
+    <div class="row2">
+      <div class="fg"><label class="lbl">Дней (можно 0.5)</label>
+        <input class="inp" type="number" id="df_days" placeholder="1" min="0.5" step="0.5" oninput="updateDailyTotal(${Number(u.rate)})">
+      </div>
+      <div class="fg"><label class="lbl">Минусы (₽)</label>
+        <input class="inp" type="number" id="df_ded" placeholder="0" oninput="updateDailyTotal(${Number(u.rate)})">
+      </div>
+    </div>
+    <div class="total-box">
+      <div style="font-size:11px;color:var(--dm);text-transform:uppercase;letter-spacing:1px">К начислению</div>
+      <div style="font-size:28px;font-weight:700;color:var(--gn)" id="daily_total">0 ₽</div>
+    </div>
+    <button class="btn" onclick="submitDays('${u.id}','${u.tailor_type}')">ДОБАВИТЬ</button>
+    ${logs.length?`
+    <div class="sec-title">Записи за неделю</div>
+    ${logs.map(l=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:600">${l.days} ${Number(l.days)===1?'день':Number(l.days)<5?'дня':'дней'}</div>
+        ${Number(l.deductions||0)>0?`<div style="font-size:12px;color:var(--ac)">минус: −${fmt(l.deductions)} ₽</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="mono c-gn">${fmt(Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0))} ₽</div>
+        <button class="btn-del" onclick="delDayLog('${l.id}','${u.tailor_type}')">✕</button>
+      </div>
+    </div>`).join('')}
+    <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid var(--bd)">
+      <span style="font-size:12px;color:var(--dm)">${totDays} дн. итого</span>
+      <span class="mono c-gn">${fmt(totMoney)} ₽</span>
+    </div>`:''}
+  </div>`;
+}
+function updateDailyTotal(rate){
+  const days=Number($('df_days')?.value||0);
+  const ded=Number($('df_ded')?.value||0);
+  setT('daily_total',fmt(Math.round(days*rate)-ded)+' ₽');
+}
+
+// ── TAILOR SALARY ─────────────────────────────
+// ── GOALS VIEW ───────────────────────────────────────────────
+function buildGoals(u){
+  const goal=loadGoal(u.id)||{type:'items',period:'week',target:''};
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  const curMon=getMon();
+  // Current progress
+  let progress=0;
+  if(goal.period==='week'){
+    const wkDelivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&d.week===S.week);
+    const wkLogs=S.dayLogs.filter(l=>String(l.tailor_id)===String(u.id)&&l.week===S.week);
+    if(goal.type==='items') progress=wkDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
+    else progress=wkDelivs.reduce((s,d)=>s+Number(d.total||0),0)+wkLogs.reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0),0);
+  } else {
+    const curDate=parseWk(S.week);
+    const monthDelivs=S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return String(d.tailor_id)===String(u.id)&&dw.getFullYear()===curDate.getFullYear()&&dw.getMonth()===curDate.getMonth();});
+    const monthLogs=S.dayLogs.filter(l=>{const lw=parseWk(l.week||'');return String(l.tailor_id)===String(u.id)&&lw.getFullYear()===curDate.getFullYear()&&lw.getMonth()===curDate.getMonth();});
+    if(goal.type==='items') progress=monthDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
+    else progress=monthDelivs.reduce((s,d)=>s+Number(d.total||0),0)+monthLogs.reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0),0);
+  }
+  const target=Number(goal.target)||0;
+  const pct=target>0?Math.min(Math.round(progress/target*100),100):0;
+  const done=target>0&&progress>=target;
+  return`<div>
+    ${target>0?`<div class="card" style="background:${done?'var(--gn-light)':pct>=80?'rgba(255,149,0,.07)':'var(--s1)'};transition:background .5s">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-weight:700;font-size:20px">${done?'🏆':pct>=80?'🔥':pct>=50?'⭐':'🎯'} ${done?'Цель достигнута!':pct>=80?'Почти!':'Моя цель'}</div>
+          <div style="font-size:12px;color:var(--dm);margin-top:2px">${goal.period==='week'?'на неделю':'на месяц'} · ${goal.type==='items'?'изделия':'зарплата'}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:26px;font-weight:800;color:${done?'var(--gn)':pct>=80?'var(--orange)':'var(--ac)'}">${pct}%</div>
+        </div>
+      </div>
+      <!-- Big progress bar -->
+      <div style="height:12px;background:var(--s3);border-radius:6px;overflow:hidden;margin-bottom:8px">
+        <div id="goal_bar_fill" style="height:100%;border-radius:6px;width:0%;background:${done?'var(--gn)':pct>=80?'linear-gradient(90deg,var(--ac),var(--orange))':'linear-gradient(90deg,var(--ac),#5AC8FA)'};transition:width .8s cubic-bezier(.4,0,.2,1)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--dm)">
+        <span>${goal.type==='items'?`${progress} шт`:`${fmt(progress)} ₽`}</span>
+        <span>${goal.type==='items'?`цель: ${target} шт`:`цель: ${fmt(target)} ₽`}</span>
+      </div>
+      ${done?'<div style="text-align:center;font-size:30px;margin-top:12px;letter-spacing:4px">🎉✨🎉</div>':''}
+      ${!done&&pct>0?`<div style="margin-top:10px;font-size:13px;color:var(--dm);text-align:center">
+        Осталось ${goal.type==='items'?`${target-progress} шт`:`${fmt(target-progress)} ₽`}
+      </div>`:''}
+    </div>`:'<div style="padding:8px 0 16px;font-size:14px;color:var(--dm)">Поставь себе цель ниже 👇</div>'}
+    <div class="card">
+      <div style="font-weight:600;font-size:16px;margin-bottom:14px">Новая цель</div>
+      <div class="fg"><label class="lbl">Тип цели</label>
+        <div style="display:flex;gap:8px">
+          <button onclick="setGoalProp('${u.id}','type','items')" style="flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:14px;background:${goal.type==='items'?'var(--ac)':'var(--s2)'};color:${goal.type==='items'?'#fff':'var(--tx)'}">📦 Изделия</button>
+          <button onclick="setGoalProp('${u.id}','type','money')" style="flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:14px;background:${goal.type==='money'?'var(--ac)':'var(--s2)'};color:${goal.type==='money'?'#fff':'var(--tx)'}">💰 Зарплата</button>
+        </div>
+      </div>
+      <div class="fg"><label class="lbl">Период</label>
+        <div style="display:flex;gap:8px">
+          <button onclick="setGoalProp('${u.id}','period','week')" style="flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:14px;background:${goal.period==='week'?'var(--ac)':'var(--s2)'};color:${goal.period==='week'?'#fff':'var(--tx)'}">Неделя</button>
+          <button onclick="setGoalProp('${u.id}','period','month')" style="flex:1;padding:10px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-size:14px;background:${goal.period==='month'?'var(--ac)':'var(--s2)'};color:${goal.period==='month'?'#fff':'var(--tx)'}">Месяц</button>
+        </div>
+      </div>
+      <div class="fg"><label class="lbl">${goal.type==='items'?'Количество изделий':'Сумма зарплаты (₽)'}</label>
+        <input class="inp" type="number" id="goal_target" value="${goal.target}" placeholder="${goal.type==='items'?'например 30':'например 20000'}" autocomplete="off">
+      </div>
+      <button class="btn" onclick="saveGoalFromForm('${u.id}')">Сохранить цель</button>
+    </div>
+  </div>`;
+}
+
+function setGoalProp(empId,key,val){
+  const g=loadGoal(empId)||{type:'items',period:'week',target:''};
+  g[key]=val;saveGoal(empId,g);
+  if(S.user&&String(S.user.id)===String(empId)){S.tailorTab='goals';renderTailorContent();}
+}
+function getGoalProgress(u){
+  if(!u)return 0;
+  const goal=loadGoal(u.id);
+  if(!goal||!goal.target)return 0;
+  const target=Number(goal.target)||0;
+  if(!target)return 0;
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  let progress=0;
+  const curDate=parseWk(S.week);
+  if(goal.period==='week'){
+    const d=S.deliveries.filter(x=>String(x.tailor_id)===String(u.id)&&x.week===S.week);
+    const l=S.dayLogs.filter(x=>String(x.tailor_id)===String(u.id)&&x.week===S.week);
+    progress=goal.type==='items'
+      ?d.reduce((s,x)=>s+Number(x.qty||0),0)
+      :d.reduce((s,x)=>s+Number(x.total||0),0)+l.reduce((s,x)=>s+Math.round(Number(x.days||0)*Number(u.rate||0))-Number(x.deductions||0),0);
+  } else {
+    const d=S.deliveries.filter(x=>{const dw=parseWk(x.week||'');return String(x.tailor_id)===String(u.id)&&dw.getFullYear()===curDate.getFullYear()&&dw.getMonth()===curDate.getMonth();});
+    const l=S.dayLogs.filter(x=>{const lw=parseWk(x.week||'');return String(x.tailor_id)===String(u.id)&&lw.getFullYear()===curDate.getFullYear()&&lw.getMonth()===curDate.getMonth();});
+    progress=goal.type==='items'
+      ?d.reduce((s,x)=>s+Number(x.qty||0),0)
+      :d.reduce((s,x)=>s+Number(x.total||0),0)+l.reduce((s,x)=>s+Math.round(Number(x.days||0)*Number(u.rate||0))-Number(x.deductions||0),0);
+  }
+  return Math.min(Math.round(progress/target*100),100);
+}
+
+function saveGoalFromForm(empId){
+  const g=loadGoal(empId)||{type:'items',period:'week',target:''};
+  g.target=document.getElementById('goal_target')?.value||'';
+  saveGoal(empId,g);
+  toast('✓ Цель сохранена');
+  S.tailorTab='goals';renderTailorContent();
+}
+
+// ── PIECE WORKER DELIVERY HISTORY ────────────────────────────
+function buildTailorHistory(u){
+  const all=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id))
+    .sort((a,b)=>a.created_at>b.created_at?-1:1);
+  if(!all.length)return '<div class="empty"><div style="font-size:36px;margin-bottom:12px">📦</div><div>Ещё нет сданных изделий</div></div>';
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  const byWeek={};
+  all.forEach(function(d){
+    const w=d.week||'—';
+    if(!byWeek[w])byWeek[w]={items:[],total:0,qty:0};
+    byWeek[w].items.push(d);
+    byWeek[w].total+=Number(d.total||0);
+    byWeek[w].qty+=Number(d.qty||0);
+  });
+  const weeks=Object.keys(byWeek).sort(function(a,b){return parseWk(b)-parseWk(a);});
+  var html='';
+  weeks.forEach(function(wk){
+    const g=byWeek[wk];
+    html+='<div style="margin-bottom:20px">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 2px">';
+    html+='<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--dm)">Неделя с '+wk+'</div>';
+    html+='<div style="font-size:13px;color:var(--dm)">'+g.qty+' шт · <span style="font-weight:700;color:var(--gn)">'+fmt(g.total)+' ₽</span></div>';
+    html+='</div>';
+    g.items.forEach(function(d){
+      const b=S.batches.find(function(x){return String(x.id)===String(d.batch_id);});
+      html+='<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">';
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b?b.product:'—')+'</div>';
+      var earlyBadge=isEarlyDelivery(d,b)?'<span class="early-badge">❤️ досрочно</span>':'';
+      html+='<div style="font-size:12px;color:var(--dm)">'+(b?b.size||'б/р':'б/р')+' · '+d.qty+' шт · '+(b?b.order_type||'':'')+'</div>'+earlyBadge;
+      html+='</div>';
+      html+='<div class="mono c-gn" style="font-size:15px;white-space:nowrap;margin-left:10px">'+fmt(Number(d.total))+'  ₽</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  return html;
+}
+
+// ── DAILY WORKER HISTORY ──────────────────────────────────────
+function buildDailyHistory(u){
+  const all=S.dayLogs.filter(function(l){return String(l.tailor_id)===String(u.id);})
+    .sort(function(a,b){return a.created_at>b.created_at?-1:1;});
+  if(!all.length)return '<div class="empty"><div style="font-size:36px;margin-bottom:12px">📅</div><div>Ещё нет записей</div></div>';
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  const byWeek={};
+  all.forEach(function(l){
+    const w=l.week||'—';
+    if(!byWeek[w])byWeek[w]={items:[],totalDays:0,totalMoney:0};
+    byWeek[w].items.push(l);
+    byWeek[w].totalDays+=Number(l.days||0);
+    byWeek[w].totalMoney+=Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0);
+  });
+  const weeks=Object.keys(byWeek).sort(function(a,b){return parseWk(b)-parseWk(a);});
+  var html='';
+  weeks.forEach(function(wk){
+    const g=byWeek[wk];
+    html+='<div style="margin-bottom:20px">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 2px">';
+    html+='<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--dm)">Неделя с '+wk+'</div>';
+    html+='<div style="font-size:13px;color:var(--dm)">'+g.totalDays+' дн · <span style="font-weight:700;color:var(--gn)">'+fmt(g.totalMoney)+' ₽</span></div>';
+    html+='</div>';
+    g.items.forEach(function(l){
+      const earned=Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0);
+      const days=Number(l.days);
+      const dLabel=days===0.5?'½ дня':days===1?'1 день':days<5?days+' дня':days+' дней';
+      var dateStr='';
+      try{if(l.created_at){const dd=new Date(l.created_at);dateStr=dd.getDate()+' '+MO[dd.getMonth()];}}catch(e){}
+      html+='<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">';
+      html+='<div>';
+      html+='<div style="font-weight:600;font-size:15px">'+dLabel+(dateStr?' <span style="font-size:12px;font-weight:400;color:var(--dm)">— '+dateStr+'</span>':'')+'</div>';
+      if(Number(l.deductions||0)>0)html+='<div style="font-size:12px;color:var(--red)">минус: −'+fmt(l.deductions)+' ₽</div>';
+      html+='</div>';
+      html+='<div class="mono c-gn" style="font-size:16px">'+fmt(earned)+' ₽</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  return html;
+}
+
+function buildTailorSalary(u){
+  const stats=getStats(u.id,S.week);
+  const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
+  const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&d.week===S.week);
+  const pays=S.payments.filter(p=>String(p.tailor_id)===String(u.id)&&p.week===S.week);
+  const carry=stats.totalOwed-stats.owed;
+  return`<div>
+    <div class="fg"><label class="lbl">Неделя</label>
+      <select class="inp" onchange="S.week=this.value;renderTailorContent()">${wkOpts}</select>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-lbl">За неделю</div><div class="stat-val">${fmt(stats.accrued)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(stats.totalPaid)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Долг итого</div><div class="stat-val" style="color:${stats.totalOwed>0?'var(--red)':'var(--gn)'}">${fmt(stats.totalOwed)} ₽</div></div>
+    </div>
+    ${carry!==0?`<div style="font-size:12px;color:var(--dm);margin-bottom:12px;padding:8px 12px;background:var(--s2);border-radius:6px">Перенос с прошлых недель: <span style="color:var(--red);font-weight:600">${fmt(carry)} ₽</span></div>`:''}
+    ${u.tailor_type==='piece'&&delivs.length?`<div class="sec-title">Сдачи за неделю</div>
+    ${delivs.map(d=>{const b=S.batches.find(x=>String(x.id)===String(d.batch_id));return`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:600;font-size:14px">${b?.product||'—'}</div><div style="font-size:12px;color:var(--dm)">${b?.size||'б/р'} · ${d.qty} шт</div></div>
+      <div class="mono c-gn">${fmt(d.total)} ₽</div>
+    </div>`;}).join('')}`:''}
+    ${pays.length?`<div class="sec-title">Выплаты</div>
+    ${pays.map(p=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div><div class="mono" style="font-size:16px">${fmt(p.amount)} ₽</div>${p.note?`<div style="font-size:12px;color:var(--dm)">${p.note}</div>`:''}</div>
+      <span style="font-size:12px;color:var(--dm)">${p.date||''}</span>
+    </div>`).join('')}`:''}
+    ${!delivs.length&&!pays.length?`<div class="empty" style="padding:30px 0">Нет данных за эту неделю</div>`:''}
+  </div>`;
+}
+
+// ═══ DELIVER MODAL ════════════════════════════════════════════════
+// Uses real DOM elements — no render() on input
+let _delivBatchId=null;
+function openDeliverModal(batchId){
+  _delivBatchId=batchId;
+  const b=S.batches.find(x=>String(x.id)===String(batchId));
+  if(!b)return;
+  const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
+  const isPos=b.is_position;
+  const otOpts=OT.map(o=>`<option value="${o.c}" ${Math.abs(o.c-Number(b.order_coeff||1))<0.01?'selected':''}>${o.l}</option>`).join('');
+  const html=`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">${isPos?'Сдать позицию':'Сдать из пачки'}</div>
+      <div class="card" style="margin-bottom:14px;background:var(--s2)">
+        <div style="font-weight:600">${b.product}</div>
+        <div style="font-size:13px;color:var(--dm)">${b.size||'б/р'} · осталось: <strong>${rem} шт</strong></div>
+      </div>
+      <div class="fg"><label class="lbl">Сколько сдаёшь (макс ${rem})</label>
+        <input class="inp" type="number" id="dq" value="${Math.min(1,rem)}" min="1" max="${rem}" step="1"
+          oninput="validateDeliverQty(${rem});updateDeliverTotal(${Number(b.price||0)},${rem})"
+          style="font-size:20px;text-align:center" autocomplete="off">
+        <div id="dq_err" style="color:var(--red);font-size:13px;margin-top:5px;display:none">Максимум ${rem} шт</div>
+      </div>
+      ${!isPos?`
+      <div class="fg"><label class="lbl">Тип заказа</label>
+        <select class="inp" id="dcoeff" onchange="updateDeliverTotal(${Number(b.price||0)},${rem})">${otOpts}</select>
+      </div>
+      <div class="total-box">
+        <div>
+          <div style="font-size:11px;color:var(--dm)">Начислено</div>
+          <div style="font-size:11px;color:var(--d2);margin-top:2px" id="dformula">${b.price}×1×${b.order_coeff||1}</div>
+        </div>
+        <div style="font-size:26px;font-weight:700;color:var(--gn)" id="dtotal">${fmt(Math.round(Number(b.price||0)*Number(b.order_coeff||1)))} ₽</div>
+      </div>`:''}
+      <div class="row2">
+        <button class="btn-sec" onclick="closeModal()">Отмена</button>
+        <button class="btn" onclick="submitDeliver(${isPos})">ПОДТВЕРДИТЬ</button>
+      </div>
+    </div>
+  </div>`;
+  setH('tailor_modal',html);
+}
+function validateDeliverQty(rem){
+  const inp=$('dq');const err=$('dq_err');if(!inp)return true;
+  const v=Number(inp.value||0);
+  if(v>rem){inp.value=rem;if(err)err.style.display='';return false;}
+  if(err)err.style.display='none';return true;
+}
+function updateDeliverTotal(price,rem){
+  const qty=Math.min(Number($('dq')?.value||0),rem);
+  const coeff=Number($('dcoeff')?.value||1);
+  const total=Math.round(qty*price*coeff);
+  setT('dtotal',fmt(total)+' ₽');
+  setT('dformula',`${price}×${qty}×${coeff}`);
+}
+function closeModal(){setH('tailor_modal','');setH('admin_modal','');}
+
+async function submitDeliver(isPos){
+  if(_busy)return;
+  const b=S.batches.find(x=>String(x.id)===String(_delivBatchId));
+  if(!b)return;
+  const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
+  if(rem<=0){closeModal();toast('Пачка уже полностью сдана');return;}
+  const rawQty=Number($('dq')?.value||0);
+  // Client-side validation before any request
+  if(!rawQty||rawQty<=0){
+    const err=$('dq_err');
+    if(err){err.textContent='Укажи количество';err.style.display='';}
+    return;
+  }
+  if(rawQty>rem){
+    const inp=$('dq'),err=$('dq_err');
+    if(inp)inp.value=rem;
+    if(err){err.textContent='Максимум '+rem+' шт';err.style.display='';}
+    return;
+  }
+  const qty=rawQty;
+  const coeff=Number($('dcoeff')?.value||b.order_coeff||1);
+  const total=isPos?0:Math.round(qty*Number(b.price||0)*coeff);
+  const newQty=(Number(b.qty_delivered)||0)+qty;
+  const row={id:uid(),batch_id:b.id,tailor_id:S.user.id,qty,total,week:NOW_WK,order_coeff:coeff,created_at:new Date().toISOString()};
+  // Capture salary before for milestone check (always use current week)
+  const oldTotal=getStats(S.user.id,NOW_WK).accrued;
+  // Close modal immediately — prevents re-tap
+  closeModal();
+  const res=await safeApi('addDelivery',{row,batchId:b.id,newQtyDelivered:newQty});
+  if(res!==null){
+    S.deliveries.push(row);b.qty_delivered=newQty;
+    toast('✓ Сдача записана');
+    renderTailorContent();
+    // Rolling counter + milestone sparkle
+    setTimeout(()=>{
+      const newTotal=getStats(S.user.id,NOW_WK).accrued;
+      const statEl=document.querySelector('.stat-val');
+      if(statEl&&!isPos)animateCounter(statEl,oldTotal,newTotal);
+      const milestone=checkMilestone(oldTotal,newTotal);
+      if(milestone&&!isPos)triggerSparkle(milestone);
+    },300);
+  }
+}
+
+async function submitDays(empId,empType){
+  if(_busy)return;
+  const days=Number($('df_days')?.value||0);
+  const ded=Number($('df_ded')?.value||0);
+  if(!days||days<=0){alert('Укажи количество дней');return;}
+  const row={id:uid(),tailor_id:empId,days,deductions:ded,week:S.week,created_at:new Date().toISOString()};
+  const res=await safeApi('addDayLog',{row});
+  if(res!==null){S.dayLogs.push(row);toast('✓ Записано');renderTailorContent();}
+}
+
+async function delDayLog(id,empType){
+  if(!confirm('Удалить?'))return;
+  try{await api('delDayLog',{id});S.dayLogs=S.dayLogs.filter(x=>String(x.id)!==String(id));renderTailorContent();}catch(e){alert(e.message);}
+}
+
+// ═══ ADMIN SCREEN ════════════════════════════════════════════════
+function buildAdmin(){
+  const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
+  return`<div class="scr">
+    <div class="hdr">
+      <div class="hdr-t">АДМИНИСТРАТОР</div>
+      <button class="exit-btn" onclick="S.view='home';render()">выйти</button>
+    </div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--bd);background:var(--s1);display:flex;align-items:center;gap:10px;flex-shrink:0" id="admin_wk_bar">
+      <span style="font-size:12px;color:var(--dm);white-space:nowrap">Неделя с</span>
+      <select class="inp" style="margin:0" onchange="S.week=this.value;renderAdminContent()">${wkOpts}</select>
+    </div>
+    <div class="tabs" id="admin_tabs">
+      <button class="tab on" onclick="switchAdminTab('summary')">Сводка</button>
+      <button class="tab" onclick="switchAdminTab('employees')">Сотрудники</button>
+      <button class="tab" onclick="switchAdminTab('catalog')">Каталог</button>
+    </div>
+    <div class="cnt" id="admin_cnt"></div>
+    <div id="admin_modal"></div>
+  </div>`;
+}
+
+let _adminTab='summary';
+function switchAdminTab(t){
+  _adminTab=t;
+  document.querySelectorAll('#admin_tabs .tab').forEach((el,i)=>{
+    el.className='tab '+(['summary','employees','catalog'][i]===t?'on':'');
+  });
+  // hide week bar for employees
+  const wb=$('admin_wk_bar');
+  if(wb)wb.style.display=t==='employees'?'none':'';
+  renderAdminContent();
+}
+function renderAdminContent(){
+  if(_adminTab==='summary')    setH('admin_cnt',buildAdminSummary());
+  else if(_adminTab==='employees') setH('admin_cnt',buildAdminEmployees());
+  else if(_adminTab==='detail')    setH('admin_cnt',buildAdminDetail());
+  else if(_adminTab==='catalog')   setH('admin_cnt',buildAdminCatalog());
+}
+
+// ── ADMIN SUMMARY ─────────────────────────────
+
+function buildAdminSummary(){
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+
+  const activeEmps=S.employees.filter(e=>e.is_active!=='FALSE'&&e.is_active!==false);
+  const allStats=activeEmps.map(e=>({...e,...getStats(e.id,S.week)}));
+  const totA=allStats.reduce((s,e)=>s+e.accrued,0);
+  const totPaid=allStats.reduce((s,e)=>s+e.paid,0);
+  const totO=allStats.reduce((s,e)=>s+e.totalOwed,0);
+
+  const isMonth=S.prodPeriod==='month';
+  const selDate=parseWk(S.week);
+  const filterDelivs=isMonth
+    ?S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
+    :S.deliveries.filter(d=>d.week===S.week);
+  const totItems=filterDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
+  const totMoney=filterDelivs.reduce((s,d)=>s+Number(d.total||0),0);
+
+  const hanging=S.batches.filter(b=>!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
+  const hangQty=hanging.reduce((s,b)=>s+Number(b.qty_total)-(Number(b.qty_delivered)||0),0);
+  const now=Date.now(),MS3W=21*24*60*60*1000;
+
+  var html='';
+
+  // ── ФОТ ──────────────────────────────────────────────────
+  html+=`<div class="card" style="background:var(--gn-light);margin-bottom:10px">
+    <div style="font-size:11px;color:var(--dm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">ФОТ · неделя с ${S.week}</div>
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-lbl">Начислено</div><div class="stat-val">${fmt(totA)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(totPaid)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Долг</div><div class="stat-val" style="color:${totO>0?'var(--red)':'var(--gn)'}">${fmt(totO)} ₽</div></div>
+    </div>
+  </div>`;
+
+  // ── ВЫПУСК — период ──────────────────────────────────────
+  html+=`<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:600">Выпуск</div>
+      <div style="display:flex;gap:0;background:var(--s2);border-radius:8px;overflow:hidden">
+        <button onclick="S.prodPeriod='week';renderAdminContent()" style="padding:5px 12px;font-size:12px;border:none;cursor:pointer;font-family:inherit;background:${!isMonth?'var(--ac)':'transparent'};color:${!isMonth?'#fff':'var(--dm)'}">Неделя</button>
+        <button onclick="S.prodPeriod='month';renderAdminContent()" style="padding:5px 12px;font-size:12px;border:none;cursor:pointer;font-family:inherit;background:${isMonth?'var(--ac)':'transparent'};color:${isMonth?'#fff':'var(--dm)'}">Месяц</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:14px;flex-wrap:wrap">
+      <span style="color:var(--dm)">сдано: <strong>${totItems} шт</strong></span>
+      <span style="color:var(--dm)">сумма: <strong class="c-gn">${fmt(totMoney)} ₽</strong></span>
+      <span style="color:var(--dm)">зависло: <strong style="color:${hangQty>0?'var(--red)':'var(--dm)'}">${hangQty} шт</strong></span>
+    </div>
+  </div>`;
+
+  // ── СДАНО — всегда видно ──────────────────────────────────
+  html+='<div class="sec-title">✅ Сдано за '+(isMonth?'месяц':'неделю')+'</div>';
+  if(filterDelivs.length){
+    filterDelivs.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).forEach(d=>{
+      const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+      const emp=S.employees.find(e=>String(e.id)===String(d.tailor_id));
+      html+=`<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(b&&b.product)||'—'}</div>
+          <div style="font-size:11px;color:var(--dm)">${(b&&b.size)||'б/р'} · ${d.qty} шт · ${(emp&&emp.name)||'?'}${isMonth?' · '+d.week:''}</div>
+        </div>
+        <div class="mono c-gn" style="font-size:13px;white-space:nowrap;margin-left:8px">${fmt(Number(d.total))} ₽</div>
+      </div>`;
+    });
+  } else {
+    html+='<div style="padding:8px 2px 14px;font-size:13px;color:var(--dm)">Нет сдач за этот период</div>';
+  }
+
+  // ── ЗАВИСЛО — всегда видно ────────────────────────────────
+  if(hanging.length){
+    html+='<div class="sec-title" style="margin-top:20px">🔴 Зависло у портных</div>';
+    hanging.forEach(b=>{
+      const emp=S.employees.find(e=>String(e.id)===String(b.tailor_id));
+      const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
+      const _bg=batchBg(b);
+      const overdue=now-new Date(b.created_at||0).getTime()>MS3W;
+      html+=`<div class="card" style="padding:10px 14px;margin-bottom:6px;${_bg?'background:'+_bg:''}" >
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px">${b.product||'—'}${overdue?' <span style="font-size:10px;color:var(--red)">⚠ просрочено</span>':''}</div>
+            <div style="font-size:11px;color:var(--dm)">${b.size||'б/р'} · зависло ${rem} шт · ${(emp&&emp.name)||'?'}</div>
+          </div>
+          <div style="font-size:13px;color:${overdue?'var(--red)':'var(--dm)'};white-space:nowrap;margin-left:8px;font-weight:600">${rem} шт</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // ── Разделитель ───────────────────────────────────────────
+  html+='<div style="height:1px;background:var(--bd);margin:20px 0"></div>';
+
+  // ── ПОРТНЫЕ ───────────────────────────────────────────────
+  allStats.forEach(function(e){
+    const fired=e.is_active==='FALSE'||e.is_active===false;
+    const hq=S.batches.filter(b=>String(b.tailor_id)===String(e.id)&&!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total)).reduce((s,b)=>s+Number(b.qty_total)-(Number(b.qty_delivered)||0),0);
+    html+=`<div class="card" style="cursor:pointer;${fired?'opacity:.5':''};margin-bottom:10px" onclick="openAdminDetail('${e.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:17px;font-weight:600">${e.name} ${e.surname}${fired?' <span style="font-size:11px;font-weight:400;color:var(--dm)">(уволен)</span>':''}</div>
+          <div style="font-size:11px;color:var(--dm)">${e.tailor_type==='piece'?'сдельная':e.tailor_type==='daily'?'поденная':'кройщик + портная'}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="mono" style="font-size:18px;color:${e.totalOwed>0?'var(--red)':'var(--gn)'}">${fmt(e.totalOwed)} ₽</div>
+          <div style="font-size:11px;color:var(--dm)">долг итого</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);font-size:12px">
+        <span style="color:var(--dm)">за неделю: <span class="mono">${fmt(e.accrued)} ₽</span></span>
+        <span style="color:var(--dm)">выплачено: <span class="mono c-gn">${fmt(e.paid)} ₽</span></span>
+        ${hq>0?`<span style="color:var(--dm)">зависло: <span class="mono" style="color:var(--red)">${hq} шт</span></span>`:''}
+      </div>
+    </div>`;
+  });
+
+  return html;
+}
+
+
+function openAdminDetail(empId){
+  _adminTab='detail';S.detailId=empId;
+  document.querySelectorAll('#admin_tabs .tab').forEach(el=>el.className='tab');
+  renderAdminContent();
+}
+
+// ── ADMIN DETAIL ──────────────────────────────
+function buildAdminDetail(){
+  const emp=S.employees.find(e=>String(e.id)===String(S.detailId));
+  if(!emp)return'';
+  const stats=getStats(emp.id,S.week);
+  const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
+  const hanging=S.batches.filter(b=>String(b.tailor_id)===String(emp.id)&&!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
+  const positions=S.batches.filter(b=>String(b.tailor_id)===String(emp.id)&&b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
+  const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(emp.id)&&d.week===S.week);
+  const logs=S.dayLogs.filter(l=>String(l.tailor_id)===String(emp.id)&&l.week===S.week);
+  const pays=S.payments.filter(p=>String(p.tailor_id)===String(emp.id)&&p.week===S.week);
+  const carry=stats.totalOwed-stats.owed;
+  return`<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="back-btn" onclick="switchAdminTab('summary')">← Сводка</button>
+        <div>
+          <div style="font-size:20px;font-weight:700;letter-spacing:-.3px">${emp.name} ${emp.surname}</div>
+          <div style="font-size:11px;color:var(--dm)">${emp.phone}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+      <button class="btn-sec" style="padding:8px 14px;font-size:13px" onclick="openEditEmpModal('${emp.id}')">✏</button>
+      ${emp.is_active==='FALSE'||emp.is_active===false
+        ?`<button class="btn-sec" style="padding:8px 14px;font-size:13px;color:var(--gn)" onclick="fireEmp('${emp.id}',false)">Вернуть</button>`
+        :`<button class="btn-sec" style="padding:8px 14px;font-size:13px;color:var(--red)" onclick="fireEmp('${emp.id}',true)">Уволить</button>`
+      }
+    </div>
+    </div>
+    <div class="fg"><label class="lbl">Неделя</label>
+      <select class="inp" onchange="S.week=this.value;renderAdminContent()">${wkOpts}</select>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-cell"><div class="stat-lbl">Начислено</div><div class="stat-val">${fmt(stats.accrued)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(stats.paid)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">За неделю</div><div class="stat-val" style="color:${stats.owed>0?'var(--red)':'var(--gn)'}">${fmt(stats.owed)} ₽</div></div>
+    </div>
+    ${stats.totalOwed>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(255,59,48,.07);border-radius:12px;margin-bottom:12px">
+      <span style="font-size:13px;color:var(--dm)">Общий долг (все недели)</span>
+      <span style="font-weight:700;color:var(--red)">${fmt(stats.totalOwed)} ₽</span>
+    </div>`:''}
+    <div class="row2" style="margin-bottom:16px">
+      <button class="btn" onclick="openPayModal('${emp.id}')">+ Выплата</button>
+      ${emp.tailor_type==='piece'?`<button class="btn-sec" onclick="openBatchModal('${emp.id}',false)">+ Пачка</button>`:''}
+      ${emp.tailor_type==='mixed'?`<button class="btn-sec" onclick="openBatchModal('${emp.id}',true)">+ Позиция</button>`:''}
+    </div>
+    ${emp.tailor_type==='piece'?`
+      ${hanging.length?`<div class="sec-title">🔴 Зависло (в работе)</div>
+      ${hanging.map(b=>{const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);return`<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div style="flex:1">
+            <div style="font-weight:600">${b.product}</div>
+            <div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · ${b.order_type||''}</div>
+            <div class="progress"><div class="progress-bar" style="width:${Math.round((Number(b.qty_delivered||0)/Number(b.qty_total))*100)}%"></div></div>
+            <div style="font-size:12px;color:var(--dm);margin-top:4px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · <strong style="color:var(--red)">зависло ${rem}</strong></div>
+            ${b.note?`<div style="font-size:12px;color:var(--dm)">${b.note}</div>`:''}
+          </div>
+          <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
+        </div>
+      </div>`;}).join('')}`:''}
+      ${delivs.length?`<div class="sec-title">✅ Сдано за неделю</div>
+      ${delivs.map(d=>{
+        const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+        const coeffChanged=d.order_coeff&&b?.order_coeff&&Math.abs(Number(d.order_coeff)-Number(b.order_coeff))>0.01;
+        return`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:14px;color:${coeffChanged?'var(--red)':'inherit'}">${b?.product||'—'}${coeffChanged?' ⚠':''}</div>
+            <div style="font-size:12px;color:${coeffChanged?'var(--red)':'var(--dm)'}">
+              ${b?.size||'б/р'} · ${d.qty} шт${coeffChanged?` · срочность изменена (×${d.order_coeff} вместо ×${b.order_coeff})`:''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="mono c-gn">${fmt(Number(d.total))} ₽</div>
+            <button class="btn-del" onclick="adminDelDelivery('${d.id}','${d.batch_id}',${Math.max(0,Number(b?.qty_delivered||0)-Number(d.qty))})">✕</button>
+          </div>
+        </div>`;
+      }).join('')}`:''}
+    `:''}
+    ${emp.tailor_type==='daily'||emp.tailor_type==='mixed'?`
+      ${logs.length?`<div class="sec-title">Дни за неделю</div>
+      ${logs.map(l=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-weight:600">${l.days} дн.</div>${Number(l.deductions||0)>0?`<div style="font-size:12px;color:var(--ac)">минус: −${fmt(l.deductions)} ₽</div>`:''}</div>
+        <div style="display:flex;align-items:center;gap:8px"><div class="mono c-gn">${fmt(Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0))} ₽</div>
+        <button class="btn-del" onclick="adminDelDayLog('${l.id}')">✕</button></div>
+      </div>`).join('')}`:''}
+    `:''}
+    ${emp.tailor_type==='mixed'&&positions.length?`<div class="sec-title">🔴 Позиции в работе</div>
+    ${positions.map(b=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:600">${b.product}</div><div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · остаток: ${Number(b.qty_total)-(Number(b.qty_delivered)||0)} шт</div></div>
+      <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
+    </div>`).join('')}`:''}
+    ${pays.length?`<div class="sec-title">Выплаты</div>
+    ${pays.map(p=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div><div class="mono" style="font-size:16px">${fmt(Number(p.amount))} ₽</div>${p.note?`<div style="font-size:12px;color:var(--dm)">${p.note}</div>`:''}<div style="font-size:11px;color:var(--dm)">${p.date||''}</div></div>
+      <button class="btn-del" onclick="adminDelPayment('${p.id}')">✕</button>
+    </div>`).join('')}`:''}
+    ${!hanging.length&&!delivs.length&&!logs.length&&!pays.length?`<div class="empty" style="padding:30px 0">Нет данных за эту неделю</div>`:''}
+  </div>`;
+}
+
+// ── ADMIN EMPLOYEES ───────────────────────────
+function buildAdminEmployees(){
+  return`<div>
+    <button class="btn" style="margin-bottom:14px" onclick="openAddEmpModal()">+ Добавить сотрудника</button>
+    ${S.employees.map(e=>`<div class="card" style="cursor:pointer" onclick="openAdminDetail('${e.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:600;font-size:16px">${e.name} ${e.surname}</div>
+          <div style="font-size:12px;color:var(--dm);margin-top:2px">${e.phone} · ${e.tailor_type==='piece'?'сдельная':e.tailor_type==='daily'?'поденная':'кройщик'}${e.rate?` · ${fmt(Number(e.rate))} ₽/день`:''}</div>
+        </div>
+        <div style="color:var(--dm);font-size:20px">›</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ── ADMIN CATALOG ─────────────────────────────
+function buildAdminCatalog(){
+  const q=(S.pSearch||'').toLowerCase();
+  const list=S.products.filter(p=>!q||String(p.name).toLowerCase().includes(q));
+  return`<div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input class="inp" style="flex:1" placeholder="Поиск…" value="${(S.pSearch||'').replace(/"/g,'&quot;')}"
+        oninput="S.pSearch=this.value;setH('admin_cnt',buildAdminCatalog())">
+      <button class="btn-sm" onclick="openAddProductModal()">+</button>
+    </div>
+    <div style="font-size:12px;color:var(--dm);margin-bottom:10px">${list.length} из ${S.products.length} изделий</div>
+    ${list.map(p=>`<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <div style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div class="mono c-gn" style="font-size:15px">${fmt(Number(p.price||0))} ₽</div>
+        <button class="btn-sec" style="padding:5px 10px;font-size:12px" onclick="openEditProductModal('${p.id}','${p.name.replace(/'/g,"\\'")}',${p.price})">✏</button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ═══ ADMIN MODALS — all use real DOM, no render() ════════════════
+
+// PAY MODAL
+function openPayModal(empId){
+  const emp=S.employees.find(e=>String(e.id)===String(empId));
+  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Выплата — ${emp?.name||''}</div>
+      <div class="fg"><label class="lbl">Сумма (₽)</label><input class="inp" type="number" id="pay_amt" placeholder="0" autocomplete="off"></div>
+      <div class="fg"><label class="lbl">Примечание</label><input class="inp" type="text" id="pay_note" placeholder="Аванс, остаток…" autocomplete="off"></div>
+      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="submitPay('${empId}')">Выплатить</button></div>
+    </div></div>`);
+}
+async function submitPay(empId){
+  const amt=Number($('pay_amt')?.value||0);
+  const note=($('pay_note')?.value||'').trim();
+  if(!amt||amt<=0){alert('Укажи сумму');return;}
+  const row={id:uid(),tailor_id:empId,amount:amt,note,week:S.week,date:new Date().toISOString().slice(0,10),created_at:new Date().toISOString()};
+  try{await api('addPayment',{row});S.payments.push(row);closeModal();toast('✓ Выплата добавлена');renderAdminContent();}catch(e){alert(e.message);if(btn){btn.disabled=false;btn.textContent='Выплатить';}}
+}
+
+// BATCH MODAL — full autocomplete working
+let _batchEmpId=null,_isPos=false;
+function openBatchModal(empId,isPos){
+  _batchEmpId=empId;_isPos=isPos;
+  const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
+  const otOpts=OT.map((o,i)=>`<option value="${i}">${o.l}</option>`).join('');
+  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">${isPos?'Новая позиция':'Новая пачка'}</div>
+      <div class="fg"><label class="lbl">Неделя</label><select class="inp" id="b_week">${wkOpts}</select></div>
+      <div class="fg"><label class="lbl">Изделие</label>
+        <div id="b_prod_display" onclick="openProductPicker()" style="background:var(--s2);border-radius:12px;padding:12px 14px;font-size:16px;cursor:pointer;color:var(--dm);display:flex;justify-content:space-between;align-items:center;min-height:48px">
+          <span id="b_prod_label">Выбрать изделие…</span>
+          <span style="color:var(--ac);font-size:14px">›</span>
+        </div>
+        <input type="hidden" id="b_prod">
+      </div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Размер</label><input class="inp" type="text" id="b_size" placeholder="S, M, 42…" autocomplete="off"></div>
+        <div class="fg"><label class="lbl">Кол-во (шт)</label><input class="inp" type="number" id="b_qty" placeholder="0" min="1" autocomplete="off"></div>
+      </div>
+      ${!isPos?`<div class="row2">
+        <div class="fg"><label class="lbl">Цена (₽)</label><input class="inp" type="number" id="b_price" placeholder="0" autocomplete="off" oninput="updateBatchTotal()"></div>
+        <div class="fg"><label class="lbl">Тип заказа</label><select class="inp" id="b_ot" onchange="updateBatchTotal()">${otOpts}</select></div>
+      </div>
+      <div class="total-box" id="b_total_box" style="display:none">
+        <div style="font-size:11px;color:var(--dm)">За штуку</div>
+        <div style="font-size:22px;font-weight:700;color:var(--gn)" id="b_total_val">0 ₽</div>
+      </div>`:''}
+      <div class="fg"><label class="lbl">Примечание</label><input class="inp" type="text" id="b_note" placeholder="Необязательно" autocomplete="off"></div>
+      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="submitBatch()">Добавить</button></div>
+    </div></div>`);
+}
+
+function onBatchProdChange(v){
+  const match=getSrc().find(p=>p.n.toLowerCase()===v.toLowerCase());
+  if(match&&!_isPos){
+    const pi=$('b_price');
+    if(pi){pi.value=match.p;updateBatchTotal();}
+  }
+}
+
+let _pickerSearch='';
+function openProductPicker(){
+  _pickerSearch='';
+  renderProductPicker();
+  document.getElementById('picker_modal').style.display='flex';
+  setTimeout(()=>{const s=document.getElementById('picker_search');if(s)s.focus();},100);
+}
+function closeProductPicker(){
+  document.getElementById('picker_modal').style.display='none';
+}
+function renderProductPicker(){
+  const q=_pickerSearch.toLowerCase();
+  const src=getSrc();
+  const list=q.length<1?src.slice(0,60):src.filter(p=>p.n.toLowerCase().includes(q));
+  const html=list.slice(0,80).map(p=>`
+    <div onclick="selectProduct('${p.n.replace(/'/g,"\'").replace(/"/g,'&quot;')}',${p.p||0})"
+      style="padding:13px 16px;border-bottom:1px solid #F2F2F7;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:#fff;font-size:15px">
+      <span style="flex:1;padding-right:12px;color:#1C1C1E">${p.n}</span>
+      ${p.p&&!_isPos?`<span style="color:#34C759;font-weight:600;white-space:nowrap;font-size:14px">${p.p.toLocaleString('ru')} ₽</span>`:''}
+    </div>`).join('');
+  const wrap=document.getElementById('picker_list');
+  if(wrap)wrap.innerHTML=html||'<div style="padding:20px;text-align:center;color:#8E8E93">Ничего не найдено</div>';
+}
+function filterPicker(v){
+  _pickerSearch=v;
+  renderProductPicker();
+}
+function selectProduct(name,price){
+  const inp=$('b_prod');
+  const lbl=$('b_prod_label');
+  if(inp)inp.value=name;
+  if(lbl){lbl.textContent=name;lbl.style.color='#1C1C1E';}
+  if(!_isPos&&price){const pi=$('b_price');if(pi){pi.value=price;updateBatchTotal();}}
+  closeProductPicker();
+}
+function updateBatchTotal(){
+  const price=Number($('b_price')?.value||0);
+  const otIdx=Number($('b_ot')?.value||0);
+  const coeff=OT[otIdx]?.c||1;
+  const box=$('b_total_box'),val=$('b_total_val');
+  if(box)box.style.display=price?'':'none';
+  if(val)val.textContent=fmt(Math.round(price*coeff))+' ₽';
+}
+async function submitBatch(){
+  if(_busy)return;
+  const prod=($('b_prod')?.value||'').trim();
+  const size=($('b_size')?.value||'').trim();
+  const qty=Number($('b_qty')?.value||0);
+  const price=Number($('b_price')?.value||0);
+  const note=($('b_note')?.value||'').trim();
+  const week=$('b_week')?.value||S.week;
+  const otIdx=Number($('b_ot')?.value||0);
+  if(!prod){alert('Укажи изделие');return;}
+  if(!qty||qty<=0){alert('Укажи количество');return;}
+  if(!_isPos&&!price){alert('Укажи цену');return;}
+  const coeff=OT[otIdx]?.c||1;
+  const row={id:uid(),tailor_id:_batchEmpId,product:prod,size,qty_total:qty,qty_delivered:0,price:_isPos?0:price,order_type:_isPos?'':OT[otIdx].l,order_coeff:_isPos?1:coeff,week,note,is_position:_isPos,created_at:new Date().toISOString()};
+  try{
+    await api('addBatch',{row});
+    S.batches.push(row);
+    closeModal();
+    toast('✓ Пачка добавлена');
+    renderAdminContent();
+  }catch(e){alert(e.message);}
+}
+
+// EMP MODALS
+function openAddEmpModal(){
+  setH('admin_modal',buildEmpModal(null));
+}
+function openEditEmpModal(empId){
+  const emp=S.employees.find(e=>String(e.id)===String(empId));
+  setH('admin_modal',buildEmpModal(emp));
+}
+function buildEmpModal(emp){
+  const isNew=!emp;
+  const tp=emp?.tailor_type||'piece';
+  const otOpts=(v)=>`<option value="piece" ${v==='piece'?'selected':''}>Сдельная</option><option value="daily" ${v==='daily'?'selected':''}>Поденная</option><option value="mixed" ${v==='mixed'?'selected':''}>Кройщик + портная</option>`;
+  return`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">${isNew?'Новый сотрудник':'Редактировать'}</div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Имя</label><input class="inp" type="text" id="ef_name" value="${(emp?.name||'').replace(/"/g,'&quot;')}" placeholder="Алина" autocomplete="off"></div>
+        <div class="fg"><label class="lbl">Фамилия</label><input class="inp" type="text" id="ef_sur" value="${(emp?.surname||'').replace(/"/g,'&quot;')}" placeholder="Иванова" autocomplete="off"></div>
+      </div>
+      <div class="fg"><label class="lbl">Телефон (логин)</label><input class="inp" type="tel" id="ef_ph" value="${emp?.phone||''}" placeholder="79001234567" inputmode="numeric" autocomplete="off"></div>
+      <div class="fg"><label class="lbl">Пароль</label><input class="inp" type="text" id="ef_pw" value="${emp?.password||'0000'}" placeholder="0000" autocomplete="off"></div>
+      <div class="fg"><label class="lbl">Тип оплаты</label>
+        <select class="inp" id="ef_type" onchange="toggleRateField(this.value)">${otOpts(tp)}</select>
+      </div>
+      <div id="ef_rate_wrap" style="${tp==='piece'?'display:none':''}">
+        <div class="fg"><label class="lbl">Ставка (₽/день)</label><input class="inp" type="number" id="ef_rate" value="${emp?.rate||''}" placeholder="4600" autocomplete="off"></div>
+      </div>
+      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="submitEmp('${emp?.id||''}')">${isNew?'Добавить':'Сохранить'}</button></div>
+    </div></div>`;
+}
+function toggleRateField(v){
+  const w=$('ef_rate_wrap');if(w)w.style.display=v==='piece'?'none':'';
+}
+async function submitEmp(editId){
+  const name=($('ef_name')?.value||'').trim();
+  const surname=($('ef_sur')?.value||'').trim();
+  const phone=($('ef_ph')?.value||'').replace(/\D/g,'');
+  const password=($('ef_pw')?.value||'').trim();
+  const type=$('ef_type')?.value||'piece';
+  const rate=Number($('ef_rate')?.value||0);
+  if(!name||!surname||!phone||!password){alert('Заполни все поля');return;}
+  const isNew=!editId;
+  const row={id:isNew?uid():editId,name,surname,phone,password,tailor_type:type,rate,is_active:true,created_at:new Date().toISOString()};
+  if(_busy)return;
+  closeModal();
+  if(isNew){
+    const res=await safeApi('addEmployee',{row});
+    if(res!==null){S.employees.push(row);toast(`✓ ${name} добавлена`);renderAdminContent();}
+  } else {
+    const updates={name,surname,phone,password,tailor_type:type,rate};
+    const res=await safeApi('updEmployee',{id:editId,updates});
+    if(res!==null){const i=S.employees.findIndex(e=>String(e.id)===String(editId));if(i>=0)S.employees[i]={...S.employees[i],...updates};toast('✓ Сохранено');renderAdminContent();}
+  }
+}
+
+// PRODUCT MODALS
+function openAddProductModal(){
+  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Новое изделие</div>
+      <div class="fg"><label class="lbl">Название</label><input class="inp" type="text" id="ep_name" placeholder="Название изделия" autocomplete="off"></div>
+      <div class="fg"><label class="lbl">Цена (₽)</label><input class="inp" type="number" id="ep_price" placeholder="0" autocomplete="off"></div>
+      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="submitAddProduct()">Добавить</button></div>
+    </div></div>`);
+}
+function openEditProductModal(id,name,price){
+  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Цена: ${name}</div>
+      <div class="fg"><label class="lbl">Новая цена (₽)</label><input class="inp" type="number" id="ep_price" value="${price}" autocomplete="off"></div>
+      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="submitEditProduct('${id}')">Сохранить</button></div>
+    </div></div>`);
+}
+async function submitAddProduct(){
+  const name=($('ep_name')?.value||'').trim();
+  const price=Number($('ep_price')?.value||0);
+  if(!name){alert('Укажи название');return;}
+  const row={id:uid(),name,price,is_active:true,created_at:new Date().toISOString()};
+  try{await api('addProduct',{row});S.products.push(row);S.products.sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));closeModal();toast('Добавлено ✓');renderAdminContent();}catch(e){alert(e.message);}
+}
+async function submitEditProduct(id){
+  const price=Number($('ep_price')?.value||0);
+  try{
+    await api('updProduct',{id,updates:{price}});
+    const p=S.products.find(x=>String(x.id)===String(id));if(p)p.price=price;
+    closeModal();toast('Цена обновлена ✓');renderAdminContent();
+  }catch(e){alert(e.message);}
+}
+
+// ADMIN DELETE ACTIONS
+async function fireEmp(id,fire){
+  if(!confirm(fire?'Уволить сотрудника? Данные сохранятся.':'Восстановить сотрудника?'))return;
+  const action=fire?'fireEmployee':'rehireEmployee';
+  await safeApi(action,{id});
+  const e=S.employees.find(x=>String(x.id)===String(id));
+  if(e)e.is_active=fire?'FALSE':'TRUE';
+  toast(fire?'Сотрудник уволен':'Сотрудник восстановлен');
+  renderAdminContent();
+}
+function buildAdminDelivHistory(emp){
+  const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  const all=S.deliveries.filter(function(d){return String(d.tailor_id)===String(emp.id);})
+    .sort(function(a,b){return parseWk(b.week)-parseWk(a.week)||0;});
+  if(!all.length)return '';
+  // Group by week
+  var byWeek={};
+  all.forEach(function(d){var w=d.week||'—';if(!byWeek[w])byWeek[w]=[];byWeek[w].push(d);});
+  var weeks=Object.keys(byWeek).sort(function(a,b){return parseWk(b)-parseWk(a);});
+  var html='<div class="sec-title">✅ Сдачи по неделям</div>';
+  weeks.forEach(function(wk){
+    var items=byWeek[wk];
+    var wkTotal=items.reduce(function(s,d){return s+Number(d.total||0);},0);
+    var wkQty=items.reduce(function(s,d){return s+Number(d.qty||0);},0);
+    html+='<div style="margin-bottom:12px">';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dm);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:0 2px">';
+    html+='<span>Неделя с '+wk+'</span><span>'+wkQty+' шт · <span style="color:var(--gn)">'+fmt(wkTotal)+' ₽</span></span></div>';
+    items.forEach(function(d){
+      var b=S.batches.find(function(x){return String(x.id)===String(d.batch_id);});
+      var coeffChanged=d.order_coeff&&b&&b.order_coeff&&Math.abs(Number(d.order_coeff)-Number(b.order_coeff))>0.01;
+      html+='<div class="card" style="padding:10px 14px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center">';
+      html+='<div style="flex:1;min-width:0">';
+      html+='<div style="font-weight:600;font-size:14px;color:'+(coeffChanged?'var(--red)':'inherit')+'">'+((b&&b.product)||'—')+(coeffChanged?' ⚠':'')+'</div>';
+      html+='<div style="font-size:12px;color:'+(coeffChanged?'var(--red)':'var(--dm)')+'">'+((b&&b.size)||'б/р')+' · '+d.qty+' шт'+coeffInfo+'</div>';
+      html+='</div>';
+      html+='<div style="display:flex;align-items:center;gap:8px"><div class="mono c-gn" style="font-size:14px">'+fmt(Number(d.total))+' ₽</div>';
+      var newQtyDel=Math.max(0,Number((b&&b.qty_delivered)||0)-Number(d.qty));
+      html+='<button class="btn-del" onclick="adminDelDelivery(\"'+d.id+'\",\"'+d.batch_id+'\",'+newQtyDel+')">✕</button></div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  return html;
+}
+
+async function adminDelBatch(id){if(!confirm('Удалить пачку?'))return;try{await api('delBatch',{id});S.batches=S.batches.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelDelivery(id,batchId,newQty){if(!confirm('Удалить сдачу?'))return;try{await api('delDelivery',{id,batchId,newQtyDelivered:Math.max(0,newQty)});S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(id));const b=S.batches.find(x=>String(x.id)===String(batchId));if(b)b.qty_delivered=Math.max(0,newQty);renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelDayLog(id){if(!confirm('Удалить?'))return;try{await api('delDayLog',{id});S.dayLogs=S.dayLogs.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelPayment(id){if(!confirm('Удалить выплату?'))return;try{await api('delPayment',{id});S.payments=S.payments.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
+
+// ═══ INIT ════════════════════════════════════════════════════════
+async function init(){
+  try{
+    const data=await api('getAll');
+    S.employees=data.employees||[];
+    S.batches=data.batches||[];
+    S.deliveries=data.deliveries||[];
+    S.dayLogs=data.dayLogs||[];
+    S.payments=data.payments||[];
+    S.products=data.products||[];
+    // Build datalist once — no DOM changes during typing
+    const dl=document.getElementById('prod_list');
+    if(dl&&S.products.length){
+      dl.innerHTML=S.products.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join('');
+    }
+    $('loader').style.display='none';
+    $('app').style.display='';
+    render();
+    // After tailor render, fill content
+    if(S.view==='tailor') renderTailorContent();
+    if(S.view==='admin'){_adminTab='summary';renderAdminContent();}
+  }catch(e){
+    $('loader').innerHTML=`<div style="max-width:360px;padding:24px;background:#fff;border:none;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:12px;text-align:center">
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;font-size:22px;font-weight:700;color:var(--red);margin-bottom:12px">Ошибка загрузки</div>
+      <div style="font-size:14px;color:var(--dm)">${e.message}</div>
+      <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#e53935;border:none;color:#fff;border-radius:8px;cursor:pointer">Перезагрузить</button>
+    </div>`;
+  }
+}
+// intercept render to also fill tab content
+const _origRender=render;
+render=()=>{_origRender();setTimeout(()=>{if(S.view==='tailor')renderTailorContent();if(S.view==='admin'){renderAdminContent();}},0);};
+init();
+</script>
+</body>
+</html>
