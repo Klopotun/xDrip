@@ -1415,7 +1415,10 @@ function buildAdminDetail(){
             <div style="font-size:12px;color:var(--dm);margin-top:4px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · <strong style="color:var(--red)">зависло ${rem}</strong></div>
             ${b.note?`<div style="font-size:12px;color:var(--dm)">${b.note}</div>`:''}
           </div>
-          <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn-sec" style="padding:6px 10px;font-size:13px" onclick="openEditBatchModal('${b.id}')">✏</button>
+            <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
+          </div>
         </div>
       </div>`;}).join('')}`:''}
       ${delivs.length?`<div class="sec-title">✅ Сдано за неделю</div>
@@ -1447,7 +1450,10 @@ function buildAdminDetail(){
     ${emp.tailor_type==='mixed'&&positions.length?`<div class="sec-title">🔴 Позиции в работе</div>
     ${positions.map(b=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-weight:600">${b.product}</div><div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · остаток: ${Number(b.qty_total)-(Number(b.qty_delivered)||0)} шт</div></div>
-      <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn-sec" style="padding:6px 10px;font-size:13px" onclick="openEditBatchModal('${b.id}')">✏</button>
+        <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
+      </div>
     </div>`).join('')}`:''}
     ${pays.length?`<div class="sec-title">Выплаты</div>
     ${pays.map(p=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
@@ -1622,6 +1628,58 @@ async function submitBatch(){
     S.batches.push(row);
     closeModal();
     toast('✓ Пачка добавлена');
+    renderAdminContent();
+  }catch(e){alert(e.message);}
+}
+
+// EDIT BATCH MODAL
+let _editBatchId=null;
+function openEditBatchModal(batchId){
+  _editBatchId=batchId;
+  const b=S.batches.find(x=>String(x.id)===String(batchId));
+  if(!b)return;
+  const isPos=!!b.is_position;
+  const otOpts=OT.map((o,i)=>`<option value="${i}" ${b.order_type===o.l?'selected':''}>${o.l}</option>`).join('');
+  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Редактировать пачку</div>
+      <div class="fg"><label class="lbl">Изделие</label><input class="inp" type="text" id="eb_prod" value="${(b.product||'').replace(/"/g,'&quot;')}" autocomplete="off"></div>
+      <div class="row2">
+        <div class="fg"><label class="lbl">Размер</label><input class="inp" type="text" id="eb_size" value="${(b.size||'').replace(/"/g,'&quot;')}" placeholder="S, M, 42…" autocomplete="off"></div>
+        <div class="fg"><label class="lbl">Кол-во (шт)</label><input class="inp" type="number" id="eb_qty" value="${Number(b.qty_total)||0}" min="${Number(b.qty_delivered)||0}" autocomplete="off"></div>
+      </div>
+      ${!isPos?`<div class="row2">
+        <div class="fg"><label class="lbl">Цена (₽)</label><input class="inp" type="number" id="eb_price" value="${Number(b.price)||0}" autocomplete="off"></div>
+        <div class="fg"><label class="lbl">Тип заказа</label><select class="inp" id="eb_ot">${otOpts}</select></div>
+      </div>`:''}
+      <div class="fg"><label class="lbl">Примечание</label><input class="inp" type="text" id="eb_note" value="${(b.note||'').replace(/"/g,'&quot;')}" placeholder="Необязательно" autocomplete="off"></div>
+      <div style="font-size:12px;color:var(--dm);margin-bottom:12px">Уже сдано: ${Number(b.qty_delivered)||0} шт — количество не может быть меньше этого</div>
+      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
+      <button class="btn" onclick="submitEditBatch()">Сохранить</button></div>
+    </div></div>`);
+}
+async function submitEditBatch(){
+  if(_busy)return;
+  const b=S.batches.find(x=>String(x.id)===String(_editBatchId));
+  if(!b)return;
+  const isPos=!!b.is_position;
+  const prod=($('eb_prod')?.value||'').trim();
+  const size=($('eb_size')?.value||'').trim();
+  const qty=Number($('eb_qty')?.value||0);
+  const price=isPos?0:Number($('eb_price')?.value||0);
+  const note=($('eb_note')?.value||'').trim();
+  const otIdx=isPos?0:Number($('eb_ot')?.value||0);
+  const minQty=Number(b.qty_delivered)||0;
+  if(!prod){alert('Укажи изделие');return;}
+  if(!qty||qty<minQty){alert(`Количество не может быть меньше уже сданных: ${minQty} шт`);return;}
+  if(!isPos&&!price){alert('Укажи цену');return;}
+  const coeff=isPos?1:(OT[otIdx]?.c||1);
+  const updates={product:prod,size,qty_total:qty,price,order_type:isPos?'':OT[otIdx].l,order_coeff:coeff,note};
+  try{
+    await api('updBatch',{id:_editBatchId,updates});
+    Object.assign(b,updates);
+    closeModal();
+    toast('✓ Пачка обновлена');
     renderAdminContent();
   }catch(e){alert(e.message);}
 }
