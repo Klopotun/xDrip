@@ -297,6 +297,16 @@ const getMon=(d=new Date())=>{
 const wkL=d=>`${d.getDate()} ${MO[d.getMonth()]} ${d.getFullYear()}`;
 const NOW_WK=wkL(getMon());
 const fmt=n=>(n||0).toLocaleString('ru');
+// Normalize week from any format (ISO UTC string, date-only, Russian text) → "D месяц YYYY"
+function normWeek(s){
+  if(!s)return '';
+  if(s.includes('T')||(s.includes('-')&&!s.includes(' '))){
+    const d=new Date(s.includes('T')?s:s+'T12:00:00');
+    const yr=d.getFullYear(),mo=d.getMonth(),dt=d.getDate(),dy=d.getDay(),diff=dy===0?6:dy-1;
+    const mon=new Date(yr,mo,dt-diff);return wkL(mon);
+  }
+  return s;
+}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const normPhone=p=>String(p||'').replace(/\D/g,'');
 const WEEKS=(()=>{const w=[],m=getMon();for(let i=-12;i<=8;i++){const d=new Date(m);d.setDate(d.getDate()+i*7);w.push(wkL(d));}return w;})();
@@ -413,10 +423,11 @@ function getStats(empId,wk){
   const emp=S.employees.find(e=>String(e.id)===String(empId));
   if(!emp)return{accrued:0,paid:0,owed:0,totalOwed:0,totalPaid:0};
   const isP=emp.tailor_type==='piece';
+  const mw=w=>normWeek(w||'')===normWeek(wk||'');
   const accrued=isP
-    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&d.week===wk).reduce((s,d)=>s+Number(d.total||0),0)
-    :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)&&l.week===wk).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
-  const paid=S.payments.filter(p=>String(p.tailor_id)===String(empId)&&p.week===wk).reduce((s,p)=>s+Number(p.amount||0),0);
+    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&mw(d.week)).reduce((s,d)=>s+Number(d.total||0),0)
+    :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)&&mw(l.week)).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
+  const paid=S.payments.filter(p=>String(p.tailor_id)===String(empId)&&mw(p.week)).reduce((s,p)=>s+Number(p.amount||0),0);
   const totalAccrued=isP
     ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)).reduce((s,d)=>s+Number(d.total||0),0)
     :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
@@ -435,7 +446,7 @@ function saveGoal(empId,g){try{localStorage.setItem(goalKey(empId),JSON.stringif
 function getPersonalRecord(empId){
   // Find the best week ever for THIS tailor (by items qty)
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  function parseWk(s){try{const n=normWeek(s);const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
   const curMon=getMon();
   const lastMon=new Date(curMon.getFullYear(),curMon.getMonth(),curMon.getDate()-7);
   const lastWkStr=wkL(lastMon);
@@ -462,7 +473,7 @@ function getPersonalRecord(empId){
   const lastWk=byWeek[lastWkStr]||{qty:0,total:0};
 
   // Current week so far
-  const curQty=S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&d.week===S.week).reduce((s,d)=>s+Number(d.qty||0),0);
+  const curQty=S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&normWeek(d.week)===normWeek(S.week)).reduce((s,d)=>s+Number(d.qty||0),0);
 
   return{
     bestQty:best.qty,
@@ -625,7 +636,7 @@ function buildTailor(){
       <button class="tab ${S.tailorTab==='goals'?'on':''}" id="tab_goals_btn" onclick="S.tailorTab='goals';renderTailorContent()"><span>🎯 Цели</span></button>`;
   return`<div class="scr">
     <div class="hdr">
-      <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${S.week}</div></div>
+      <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${normWeek(S.week)}</div></div>
       <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
     </div>
     <div class="tabs" id="tailor_tabs">${tabs}</div>
@@ -777,7 +788,7 @@ function buildPositions(u){
 
 // ── DAILY FORM ────────────────────────────────
 function buildDailyForm(u){
-  const logs=S.dayLogs.filter(l=>String(l.tailor_id)===String(u.id)&&l.week===S.week).sort((a,b)=>a.created_at<b.created_at?-1:1);
+  const logs=S.dayLogs.filter(l=>String(l.tailor_id)===String(u.id)&&normWeek(l.week)===normWeek(S.week)).sort((a,b)=>a.created_at<b.created_at?-1:1);
   const totDays=logs.reduce((s,l)=>s+Number(l.days||0),0);
   const totMoney=logs.reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0),0);
   const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
@@ -828,13 +839,13 @@ function updateDailyTotal(rate){
 function buildGoals(u){
   const goal=loadGoal(u.id)||{type:'items',period:'week',target:''};
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  function parseWk(s){try{const n=normWeek(s);const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
   const curMon=getMon();
   // Current progress
   let progress=0;
   if(goal.period==='week'){
-    const wkDelivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&d.week===S.week);
-    const wkLogs=S.dayLogs.filter(l=>String(l.tailor_id)===String(u.id)&&l.week===S.week);
+    const wkDelivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&normWeek(d.week)===normWeek(S.week));
+    const wkLogs=S.dayLogs.filter(l=>String(l.tailor_id)===String(u.id)&&normWeek(l.week)===normWeek(S.week));
     if(goal.type==='items') progress=wkDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
     else progress=wkDelivs.reduce((s,d)=>s+Number(d.total||0),0)+wkLogs.reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(u.rate||0))-Number(l.deductions||0),0);
   } else {
@@ -905,12 +916,12 @@ function getGoalProgress(u){
   const target=Number(goal.target)||0;
   if(!target)return 0;
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  function parseWk(s){try{const n=normWeek(s);const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
   let progress=0;
   const curDate=parseWk(S.week);
   if(goal.period==='week'){
-    const d=S.deliveries.filter(x=>String(x.tailor_id)===String(u.id)&&x.week===S.week);
-    const l=S.dayLogs.filter(x=>String(x.tailor_id)===String(u.id)&&x.week===S.week);
+    const d=S.deliveries.filter(x=>String(x.tailor_id)===String(u.id)&&normWeek(x.week)===normWeek(S.week));
+    const l=S.dayLogs.filter(x=>String(x.tailor_id)===String(u.id)&&normWeek(x.week)===normWeek(S.week));
     progress=goal.type==='items'
       ?d.reduce((s,x)=>s+Number(x.qty||0),0)
       :d.reduce((s,x)=>s+Number(x.total||0),0)+l.reduce((s,x)=>s+Math.round(Number(x.days||0)*Number(u.rate||0))-Number(x.deductions||0),0);
@@ -938,10 +949,23 @@ function buildTailorHistory(u){
     .sort((a,b)=>a.created_at>b.created_at?-1:1);
   if(!all.length)return '<div class="empty"><div style="font-size:36px;margin-bottom:12px">📦</div><div>Ещё нет сданных изделий</div></div>';
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  // Normalise week string from any format (ISO, timestamp, Russian) → "D месяц YYYY"
+  function normWk(s){
+    if(!s||s==='—')return s||'—';
+    if(s.includes('T')||(s.includes('-')&&!s.includes(' '))){
+      const ds=s.includes('T')?s:s+'T12:00:00';
+      const d=new Date(ds);const yr=d.getFullYear(),mo=d.getMonth(),dt=d.getDate(),dy=d.getDay(),diff=dy===0?6:dy-1;
+      const mon=new Date(yr,mo,dt-diff);return mon.getDate()+' '+MO[mon.getMonth()]+' '+mon.getFullYear();
+    }
+    return s;
+  }
+  function parseWk(s){
+    const n=normWk(s);
+    try{const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}
+  }
   const byWeek={};
   all.forEach(function(d){
-    const w=d.week||'—';
+    const w=normWk(d.week)||'—';
     if(!byWeek[w])byWeek[w]={items:[],total:0,qty:0};
     byWeek[w].items.push(d);
     byWeek[w].total+=Number(d.total||0);
@@ -978,7 +1002,7 @@ function buildDailyHistory(u){
     .sort(function(a,b){return a.created_at>b.created_at?-1:1;});
   if(!all.length)return '<div class="empty"><div style="font-size:36px;margin-bottom:12px">📅</div><div>Ещё нет записей</div></div>';
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  function parseWk(s){try{const n=normWeek(s);const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
   const byWeek={};
   all.forEach(function(l){
     const w=l.week||'—';
@@ -1018,8 +1042,8 @@ function buildDailyHistory(u){
 function buildTailorSalary(u){
   const stats=getStats(u.id,S.week);
   const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
-  const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&d.week===S.week);
-  const pays=S.payments.filter(p=>String(p.tailor_id)===String(u.id)&&p.week===S.week);
+  const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&normWeek(d.week)===normWeek(S.week));
+  const pays=S.payments.filter(p=>String(p.tailor_id)===String(u.id)&&normWeek(p.week)===normWeek(S.week));
   const carry=stats.totalOwed-stats.owed;
   return`<div>
     <div class="fg"><label class="lbl">Неделя</label>
@@ -1205,7 +1229,7 @@ function renderAdminContent(){
 
 function buildAdminSummary(){
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  function parseWk(s){try{const n=normWeek(s);const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
 
   const activeEmps=S.employees.filter(e=>e.is_active!=='FALSE'&&e.is_active!==false);
   const allStats=activeEmps.map(e=>({...e,...getStats(e.id,S.week)}));
@@ -1217,7 +1241,7 @@ function buildAdminSummary(){
   const selDate=parseWk(S.week);
   const filterDelivs=isMonth
     ?S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
-    :S.deliveries.filter(d=>d.week===S.week);
+    :S.deliveries.filter(d=>normWeek(d.week)===normWeek(S.week));
   const totItems=filterDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
   const totMoney=filterDelivs.reduce((s,d)=>s+Number(d.total||0),0);
 
@@ -1229,7 +1253,7 @@ function buildAdminSummary(){
 
   // ── ФОТ ──────────────────────────────────────────────────
   html+=`<div class="card" style="background:var(--gn-light);margin-bottom:10px">
-    <div style="font-size:11px;color:var(--dm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">ФОТ · неделя с ${S.week}</div>
+    <div style="font-size:11px;color:var(--dm);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">ФОТ · неделя с ${normWeek(S.week)}</div>
     <div class="stat-grid">
       <div class="stat-cell"><div class="stat-lbl">Начислено</div><div class="stat-val">${fmt(totA)} ₽</div></div>
       <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(totPaid)} ₽</div></div>
@@ -1335,9 +1359,9 @@ function buildAdminDetail(){
   const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
   const hanging=S.batches.filter(b=>String(b.tailor_id)===String(emp.id)&&!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
   const positions=S.batches.filter(b=>String(b.tailor_id)===String(emp.id)&&b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
-  const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(emp.id)&&d.week===S.week);
-  const logs=S.dayLogs.filter(l=>String(l.tailor_id)===String(emp.id)&&l.week===S.week);
-  const pays=S.payments.filter(p=>String(p.tailor_id)===String(emp.id)&&p.week===S.week);
+  const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(emp.id)&&normWeek(d.week)===normWeek(S.week));
+  const logs=S.dayLogs.filter(l=>String(l.tailor_id)===String(emp.id)&&normWeek(l.week)===normWeek(S.week));
+  const pays=S.payments.filter(p=>String(p.tailor_id)===String(emp.id)&&normWeek(p.week)===normWeek(S.week));
   const carry=stats.totalOwed-stats.owed;
   return`<div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -1699,7 +1723,7 @@ async function fireEmp(id,fire){
 }
 function buildAdminDelivHistory(emp){
   const MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  function parseWk(s){try{const p=s.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
+  function parseWk(s){try{const n=normWeek(s);const p=n.split(' ');return new Date(Number(p[2]),MO.indexOf(p[1]),Number(p[0]));}catch{return new Date(0);}}
   const all=S.deliveries.filter(function(d){return String(d.tailor_id)===String(emp.id);})
     .sort(function(a,b){return parseWk(b.week)-parseWk(a.week)||0;});
   if(!all.length)return '';
