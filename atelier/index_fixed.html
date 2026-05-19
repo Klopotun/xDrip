@@ -564,7 +564,6 @@ function buildHome(){
       <div id="lerr" style="color:var(--ac);font-size:13px;margin-bottom:12px;display:none"></div>
       <button class="btn" onclick="doLogin()">ВОЙТИ</button>
       <button class="btn-ghost" onclick="S.view='pin';render()">👑 &nbsp;Администратор</button>
-      <button class="btn-ghost" onclick="syncData()" style="margin-top:4px;font-size:14px;color:var(--dm)">⟳ &nbsp;Синхронизировать с таблицей</button>
     </div>
   </div>`;
 }
@@ -638,10 +637,7 @@ function buildTailor(){
   return`<div class="scr">
     <div class="hdr">
       <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${normWeek(S.week)}</div></div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="exit-btn" title="Синхронизировать с таблицей" onclick="syncData()" style="font-size:18px;padding:2px 4px">⟳</button>
-        <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
-      </div>
+      <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
     </div>
     <div class="tabs" id="tailor_tabs">${tabs}</div>
     <div id="tailor_record"></div>
