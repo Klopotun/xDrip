@@ -7,215 +7,385 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Дневник диабетика</title>
 <style>
-/* ── Reset & base ─────────────────────────────────────────────────────── */
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#EEF2F7;color:#1a1a2e;overscroll-behavior:none}
+/* ── Tokens ───────────────────────────────────────────────────────────── */
+:root {
+  --bg:       #E8ECF4;
+  --sd:       rgba(163,175,200,.55);   /* shadow dark  */
+  --sl:       rgba(255,255,255,.90);   /* shadow light */
+  --accent:   #7B8FFF;
+  --a-green:  #6DC99A;
+  --a-orange: #F5A77A;
+  --a-red:    #F08888;
+  --text:     #4A5370;
+  --muted:    #8E9BB8;
+  --white:    #FFFFFF;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); overscroll-behavior: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Segoe UI', Roboto, sans-serif; }
+
+/* ── Neumorphic helpers ────────────────────────────────────────────────── */
+.neu   { background:var(--bg); box-shadow: 7px 7px 18px var(--sd), -7px -7px 18px var(--sl); }
+.neu-s { background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px  -4px 10px var(--sl); }
+.neu-in{ background:var(--bg); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); }
 
 /* ── Screens ─────────────────────────────────────────────────────────── */
-.screen{display:none;min-height:100vh;padding:16px 16px 40px;animation:fadeIn .18s ease}
-.screen.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.screen { display:none; min-height:100vh; padding:20px 18px 48px; animation: fadeUp .2s ease; }
+.screen.active { display:block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
 /* ── Header ──────────────────────────────────────────────────────────── */
-.hdr{display:flex;align-items:center;gap:8px;padding:8px 0 20px}
-.hdr h1{font-size:19px;font-weight:700}
-.back{background:none;border:none;font-size:22px;cursor:pointer;padding:8px;border-radius:50%;color:#444;line-height:1;transition:background .15s}
-.back:active{background:rgba(0,0,0,.1)}
+.hdr { display:flex; align-items:center; gap:10px; padding: 6px 0 22px; }
+.hdr h1 { font-size:18px; font-weight:700; color:var(--text); }
+.back {
+  width:40px; height:40px; border-radius:50%; border:none; cursor:pointer;
+  font-size:18px; color:var(--muted); display:flex; align-items:center; justify-content:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: box-shadow .15s, transform .12s;
+}
+.back:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.95); }
 
 /* ── Main screen ─────────────────────────────────────────────────────── */
-.main-hero{text-align:center;padding:24px 0 8px}
-.main-hero h1{font-size:22px;font-weight:800;color:#1a1a2e}
-.main-hero .time{font-size:15px;color:#777;margin-top:4px}
+.hero { text-align:center; padding:28px 0 32px; }
+.hero-greeting { font-size:13px; color:var(--muted); font-weight:500; letter-spacing:.4px; text-transform:uppercase; margin-bottom:6px; }
+.hero h1 { font-size:26px; font-weight:800; color:var(--text); }
+.hero-time { font-size:14px; color:var(--muted); margin-top:4px; }
 
-.main-btns{display:flex;flex-direction:column;gap:14px;margin-top:28px}
-.main-btn{display:flex;align-items:center;gap:18px;padding:22px 24px;border:none;border-radius:22px;cursor:pointer;color:#fff;font-size:17px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.16);transition:transform .13s,box-shadow .13s;text-align:left;width:100%}
-.main-btn:active{transform:scale(.97);box-shadow:0 3px 10px rgba(0,0,0,.14)}
-.main-btn .emoji{font-size:34px;line-height:1;flex-shrink:0}
-.main-btn .lbl{flex:1}
-.main-btn .sub{font-size:12px;font-weight:400;opacity:.85;margin-top:2px}
-.btn-ins{background:linear-gradient(135deg,#3B82F6,#1D4ED8)}
-.btn-food{background:linear-gradient(135deg,#22C55E,#15803D)}
-.btn-sug{background:linear-gradient(135deg,#F97316,#C2410C)}
+/* ── Reminder ────────────────────────────────────────────────────────── */
+.reminder {
+  border-radius:22px; padding:16px 20px; margin-bottom:18px;
+  cursor:pointer; display:none;
+  background:var(--bg);
+  box-shadow: 6px 6px 16px var(--sd), -6px -6px 16px var(--sl);
+  border-left:4px solid var(--a-orange);
+}
+.reminder .r-icon { font-size:22px; margin-bottom:4px; }
+.reminder .r-title { font-weight:700; font-size:15px; color:var(--text); }
+.reminder .r-sub { font-size:13px; color:var(--muted); margin-top:3px; }
 
-.journal-btn{display:block;width:100%;margin-top:16px;padding:16px;background:#fff;border:none;border-radius:18px;font-size:15px;color:#555;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.08);font-weight:500;transition:background .15s}
-.journal-btn:active{background:#f0f0f0}
+/* ── Main action buttons ─────────────────────────────────────────────── */
+.main-btns { display:flex; flex-direction:column; gap:14px; }
+.main-btn {
+  display:flex; align-items:center; gap:18px; padding:20px 22px;
+  border:none; border-radius:24px; cursor:pointer; width:100%; text-align:left;
+  background:var(--bg); box-shadow: 7px 7px 18px var(--sd), -7px -7px 18px var(--sl);
+  transition: box-shadow .15s, transform .12s;
+}
+.main-btn:active { box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); transform:scale(.98); }
+.btn-icon-wrap {
+  width:52px; height:52px; border-radius:18px; display:flex; align-items:center; justify-content:center;
+  font-size:26px; flex-shrink:0;
+}
+.ic-blue   { background: linear-gradient(145deg,#9BA8FF,#6B7FEE); box-shadow:3px 3px 8px rgba(107,127,238,.35); }
+.ic-green  { background: linear-gradient(145deg,#84DAAD,#52B881); box-shadow:3px 3px 8px rgba(82,184,129,.35); }
+.ic-orange { background: linear-gradient(145deg,#F9B98A,#F08060); box-shadow:3px 3px 8px rgba(240,128,96,.35); }
+.btn-text-wrap .btn-label { font-size:16px; font-weight:700; color:var(--text); }
+.btn-text-wrap .btn-sub   { font-size:12px; color:var(--muted); margin-top:3px; }
+.btn-arrow { margin-left:auto; font-size:18px; color:var(--muted); }
 
-/* ── Reminder banner ─────────────────────────────────────────────────── */
-.reminder{background:linear-gradient(135deg,#F97316,#DC2626);color:#fff;border-radius:18px;padding:16px 20px;margin-top:0;margin-bottom:16px;cursor:pointer;display:none;box-shadow:0 4px 16px rgba(249,115,22,.4)}
-.reminder .r-title{font-weight:700;font-size:15px;margin-bottom:4px}
-.reminder .r-sub{font-size:13px;opacity:.9}
+.journal-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; margin-top:14px; padding:16px;
+  border:none; border-radius:20px; cursor:pointer; font-size:14px; font-weight:600; color:var(--muted);
+  background:var(--bg); box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+  transition: box-shadow .15s;
+}
+.journal-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
 
 /* ── Card ────────────────────────────────────────────────────────────── */
-.card{background:#fff;border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
-.card-lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#9CA3AF;margin-bottom:12px}
+.card {
+  background:var(--bg); border-radius:22px; padding:18px 20px; margin-bottom:14px;
+  box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+}
+.card-lbl {
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px;
+  color:var(--muted); margin-bottom:14px;
+}
 
-/* ── Type toggle (2 or 3 options) ────────────────────────────────────── */
-.type-row{display:flex;gap:10px}
-.type-opt{flex:1;padding:14px 8px;border:2px solid #E5E7EB;border-radius:14px;background:#fff;cursor:pointer;text-align:center;font-size:13px;font-weight:600;transition:all .2s;line-height:1.3}
-.type-opt .ico{font-size:22px;margin-bottom:5px}
-.type-opt.sel{border-color:#3B82F6;background:#EFF6FF;color:#1D4ED8}
-.type-opt.sel-green{border-color:#22C55E;background:#F0FDF4;color:#15803D}
-.type-opt.sel-red{border-color:#F97316;background:#FFF7ED;color:#C2410C}
+/* ── Type toggle ─────────────────────────────────────────────────────── */
+.type-row { display:flex; gap:10px; }
+.type-opt {
+  flex:1; padding:14px 6px; border-radius:16px; border:none; cursor:pointer;
+  text-align:center; font-size:12px; font-weight:600; line-height:1.4; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: all .2s;
+}
+.type-opt .t-ico { font-size:20px; margin-bottom:6px; display:block; }
+.type-opt.sel {
+  color:var(--white); background:var(--accent);
+  box-shadow: 4px 4px 12px rgba(123,143,255,.4), -2px -2px 8px rgba(255,255,255,.6);
+}
+.type-opt.sel-green { color:var(--white); background:var(--a-green); box-shadow: 4px 4px 12px rgba(109,201,154,.4), -2px -2px 8px rgba(255,255,255,.6); }
+.type-opt.sel-red   { color:var(--white); background:var(--a-red);   box-shadow: 4px 4px 12px rgba(240,136,136,.4), -2px -2px 8px rgba(255,255,255,.6); }
 
-/* ── Insulin name input ──────────────────────────────────────────────── */
-.ins-name-row{margin-top:10px;display:none}
-.ins-name-row.visible{display:block}
-
-/* ── Drum picker ─────────────────────────────────────────────────────── */
-.drum-wrap{position:relative;height:240px;overflow:hidden;cursor:grab;user-select:none}
-.drum-wrap:active{cursor:grabbing}
-.drum-fade-top,.drum-fade-bot{position:absolute;left:0;right:0;height:96px;z-index:2;pointer-events:none}
-.drum-fade-top{top:0;background:linear-gradient(to bottom,rgba(255,255,255,1),rgba(255,255,255,0))}
-.drum-fade-bot{bottom:0;background:linear-gradient(to top,rgba(255,255,255,1),rgba(255,255,255,0))}
-.drum-sel-band{position:absolute;left:0;right:0;height:48px;top:96px;border-top:2px solid #3B82F6;border-bottom:2px solid #3B82F6;z-index:1;pointer-events:none;border-radius:4px}
-.drum-list{list-style:none;padding:96px 0;will-change:transform}
-.drum-item{height:48px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;color:#CBD5E1;transition:color .15s,font-size .15s}
-.drum-item.sel{color:#1D4ED8;font-size:30px;font-weight:800}
-.drum-caption{text-align:center;font-size:13px;color:#9CA3AF;margin-top:8px}
-.drum-caption strong{color:#1D4ED8}
-
-/* ── Site grid ───────────────────────────────────────────────────────── */
-.site-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.site-btn{padding:14px 8px;border:2px solid #E5E7EB;border-radius:14px;background:#fff;cursor:pointer;text-align:center;font-size:13px;font-weight:600;line-height:1.4;transition:all .2s}
-.site-btn .s-ico{font-size:22px;margin-bottom:4px}
-.site-btn.sel{border-color:#3B82F6;background:#EFF6FF;color:#1D4ED8}
-.site-btn.last{border-color:#F59E0B;background:#FFFBEB}
-.site-btn.last::after{content:' ⚠';font-size:11px}
+/* ── Custom insulin name ─────────────────────────────────────────────── */
+.ins-name-row { display:none; margin-top:12px; }
+.ins-name-row.visible { display:block; }
 
 /* ── Banners ─────────────────────────────────────────────────────────── */
-.banner{border-radius:14px;padding:12px 16px;font-size:13px;margin-bottom:10px;display:none}
-.banner.visible{display:block}
-.banner-warn{background:#FFF7ED;border:1.5px solid #FCD34D;color:#92400E}
-.banner-info{background:#EFF6FF;border:1.5px solid #93C5FD;color:#1E40AF}
-.banner-sug{background:#F0FDF4;border:1.5px solid #86EFAC;color:#14532D}
-.sug-use{background:#22C55E;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px}
+.banner { border-radius:16px; padding:14px 18px; font-size:13px; margin-bottom:12px; display:none; font-weight:500; }
+.banner.visible { display:block; }
+.banner-warn   { background:#FFF4E8; color:#C67030; box-shadow:0 2px 8px rgba(198,112,48,.15); }
+.banner-sug    { background:#EBF7F1; color:#2E7D57; box-shadow:0 2px 8px rgba(46,125,87,.15); }
+.sug-use {
+  margin-top:10px; background:var(--a-green); color:#fff; border:none;
+  border-radius:12px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;
+}
 
-/* ── Form inputs ─────────────────────────────────────────────────────── */
-.inp{width:100%;padding:14px 16px;border:2px solid #E5E7EB;border-radius:14px;font-size:16px;outline:none;background:#FAFAFA;transition:border-color .2s;font-family:inherit}
-.inp:focus{border-color:#3B82F6;background:#fff}
-.inp-big{font-size:28px;text-align:center;padding:16px}
-.inp-center{text-align:center}
-textarea.inp{resize:none;height:76px}
-select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
+/* ── Drum picker ─────────────────────────────────────────────────────── */
+.drum-wrap {
+  position:relative; height:220px; overflow:hidden; cursor:grab; user-select:none;
+  border-radius:18px;
+  box-shadow: inset 5px 5px 14px var(--sd), inset -5px -5px 14px var(--sl);
+}
+.drum-wrap:active { cursor:grabbing; }
+.drum-fade-top, .drum-fade-bot {
+  position:absolute; left:0; right:0; height:88px; z-index:2; pointer-events:none;
+}
+.drum-fade-top { top:0;    background:linear-gradient(to bottom, var(--bg) 0%, transparent 100%); }
+.drum-fade-bot { bottom:0; background:linear-gradient(to top,   var(--bg) 0%, transparent 100%); }
+.drum-sel-band {
+  position:absolute; left:16px; right:16px; height:48px; top:86px;
+  border-radius:14px; z-index:1; pointer-events:none;
+  background:rgba(123,143,255,.10);
+  box-shadow: inset 2px 2px 6px rgba(123,143,255,.15), inset -2px -2px 6px rgba(255,255,255,.5);
+}
+.drum-list { list-style:none; padding:86px 0; will-change:transform; }
+.drum-item {
+  height:48px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:500; color:var(--muted);
+  transition: color .15s, font-size .15s, font-weight .15s;
+}
+.drum-item.sel { color:var(--accent); font-size:30px; font-weight:800; }
+.drum-caption { text-align:center; font-size:13px; color:var(--muted); margin-top:10px; font-weight:500; }
+.drum-caption strong { color:var(--accent); }
+
+/* ── Site grid ───────────────────────────────────────────────────────── */
+.site-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.site-btn {
+  padding:14px 8px; border-radius:16px; border:none; cursor:pointer;
+  text-align:center; font-size:12px; font-weight:600; line-height:1.5; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: all .2s;
+}
+.site-btn .s-ico { font-size:20px; display:block; margin-bottom:4px; }
+.site-btn.sel  { color:var(--accent); box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+.site-btn.last { color:var(--a-orange); }
+.site-btn.last::after { content:' ⚠'; font-size:10px; }
+
+/* ── Inputs ──────────────────────────────────────────────────────────── */
+.inp {
+  width:100%; padding:14px 18px; border:none; border-radius:14px; font-size:15px;
+  outline:none; font-family:inherit; color:var(--text);
+  background:var(--bg); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl);
+  transition: box-shadow .2s;
+}
+.inp:focus { box-shadow: inset 5px 5px 12px var(--sd), inset -5px -5px 12px var(--sl); }
+.inp-big    { font-size:26px; text-align:center; font-weight:700; }
+.inp-center { text-align:center; }
+textarea.inp { resize:none; height:74px; }
+select.inp {
+  appearance:none; cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E9BB8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 16px center; padding-right:44px;
+}
+::placeholder { color:var(--muted); }
 
 /* ── Time row ────────────────────────────────────────────────────────── */
-.time-row{display:flex;align-items:center;justify-content:space-between}
-.time-val{font-size:16px;font-weight:600}
-.time-toggle{font-size:13px;color:#3B82F6;cursor:pointer;font-weight:600;padding:4px 8px}
+.time-row { display:flex; align-items:center; justify-content:space-between; }
+.time-val  { font-size:16px; font-weight:700; color:var(--text); }
+.time-toggle { font-size:13px; color:var(--accent); cursor:pointer; font-weight:600; padding:4px 8px;
+  background:var(--bg); border-radius:10px; box-shadow:3px 3px 7px var(--sd),-3px -3px 7px var(--sl); }
 
 /* ── HE counter ──────────────────────────────────────────────────────── */
-.he-ctrl{display:flex;align-items:center;justify-content:center;gap:20px;padding:8px 0}
-.he-val{font-size:42px;font-weight:800;color:#15803D;min-width:80px;text-align:center}
-.he-btn{width:52px;height:52px;border-radius:50%;border:none;font-size:26px;cursor:pointer;font-weight:300;display:flex;align-items:center;justify-content:center;transition:transform .13s}
-.he-btn:active{transform:scale(.88)}
-.he-minus{background:#FEE2E2;color:#DC2626}
-.he-plus{background:#DCFCE7;color:#15803D}
-.he-presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;justify-content:center}
-.he-pre{background:#F0FDF4;color:#15803D;border:1.5px solid #86EFAC;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.he-pre:active{background:#DCFCE7}
+.he-ctrl { display:flex; align-items:center; justify-content:center; gap:24px; padding:8px 0; }
+.he-val  { font-size:48px; font-weight:800; color:var(--a-green); min-width:90px; text-align:center; }
+.he-btn  {
+  width:52px; height:52px; border-radius:50%; border:none; font-size:24px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-weight:300;
+  background:var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+  transition: box-shadow .13s, transform .12s; color:var(--muted);
+}
+.he-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.92); }
+.he-presets { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; justify-content:center; }
+.he-pre {
+  background:var(--bg); color:var(--text); border:none; border-radius:12px;
+  padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer;
+  box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+  transition: box-shadow .13s;
+}
+.he-pre:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
 
 /* ── Sugar input ─────────────────────────────────────────────────────── */
-.sug-big{font-size:52px;font-weight:800;text-align:center;border:2.5px solid #E5E7EB;border-radius:18px;padding:20px;width:100%;background:#FAFAFA;outline:none;transition:border-color .2s}
-.sug-big:focus{border-color:#F97316;background:#fff}
-.sug-indicator{text-align:center;margin-top:10px;font-size:15px;font-weight:700;min-height:24px}
+.sug-big {
+  width:100%; font-size:52px; font-weight:800; text-align:center; border:none;
+  border-radius:20px; padding:20px; color:var(--text); font-family:inherit;
+  background:var(--bg); box-shadow: inset 5px 5px 14px var(--sd), inset -5px -5px 14px var(--sl);
+  outline:none; transition: box-shadow .2s;
+}
+.sug-big:focus { box-shadow: inset 6px 6px 16px var(--sd), inset -6px -6px 16px var(--sl); }
+.sug-indicator { text-align:center; margin-top:12px; font-size:14px; font-weight:700; min-height:22px; }
 
-/* ── Submit button ───────────────────────────────────────────────────── */
-.submit{width:100%;padding:18px;border:none;border-radius:18px;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform .13s,box-shadow .13s;margin-top:8px}
-.submit:active{transform:scale(.98)}
-.submit:disabled{opacity:.6;cursor:not-allowed}
-.sub-blue{background:linear-gradient(135deg,#3B82F6,#1D4ED8);box-shadow:0 6px 20px rgba(59,130,246,.35)}
-.sub-green{background:linear-gradient(135deg,#22C55E,#15803D);box-shadow:0 6px 20px rgba(34,197,94,.35)}
-.sub-red{background:linear-gradient(135deg,#F97316,#C2410C);box-shadow:0 6px 20px rgba(249,115,22,.35)}
-.sub-gray{background:#6B7280;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+/* ── Submit buttons ──────────────────────────────────────────────────── */
+.submit {
+  width:100%; padding:18px; border:none; border-radius:20px; color:#fff;
+  font-size:16px; font-weight:700; cursor:pointer; margin-top:8px;
+  transition: box-shadow .15s, transform .12s;
+}
+.submit:active { transform:scale(.98); }
+.submit:disabled { opacity:.55; cursor:not-allowed; }
+.sub-blue {
+  background: linear-gradient(145deg, #9BA8FF, #6B7FEE);
+  box-shadow: 6px 6px 16px rgba(107,127,238,.35), -4px -4px 10px rgba(255,255,255,.7);
+}
+.sub-green {
+  background: linear-gradient(145deg, #84DAAD, #52B881);
+  box-shadow: 6px 6px 16px rgba(82,184,129,.35), -4px -4px 10px rgba(255,255,255,.7);
+}
+.sub-red {
+  background: linear-gradient(145deg, #F9B98A, #F08060);
+  box-shadow: 6px 6px 16px rgba(240,128,96,.35), -4px -4px 10px rgba(255,255,255,.7);
+}
 
-/* ── Stats ────────────────────────────────────────────────────────────── */
-.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-.stat{background:#fff;border-radius:14px;padding:14px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.stat-val{font-size:26px;font-weight:800}
-.stat-lbl{font-size:11px;color:#9CA3AF;margin-top:2px;font-weight:500}
-.sv-blue{color:#3B82F6}.sv-green{color:#22C55E}.sv-red{color:#F97316}
+/* ── Journal stats ───────────────────────────────────────────────────── */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat {
+  background:var(--bg); border-radius:18px; padding:14px 8px; text-align:center;
+  box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+}
+.stat-val { font-size:24px; font-weight:800; }
+.stat-lbl { font-size:11px; color:var(--muted); margin-top:3px; font-weight:500; }
+.sv-blue  { color:var(--accent); }
+.sv-green { color:var(--a-green); }
+.sv-red   { color:var(--a-red); }
 
 /* ── Date nav ────────────────────────────────────────────────────────── */
-.date-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.dn-btn{background:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.dn-label{font-size:15px;font-weight:700}
+.date-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.dn-btn {
+  width:40px; height:40px; border-radius:50%; border:none; font-size:20px; cursor:pointer; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  display:flex; align-items:center; justify-content:center;
+  transition: box-shadow .13s;
+}
+.dn-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+.dn-label { font-size:15px; font-weight:700; color:var(--text); }
 
 /* ── Timeline ────────────────────────────────────────────────────────── */
-.tl-item{display:flex;gap:12px;margin-bottom:12px}
-.tl-dot{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;color:#fff}
-.dot-ins{background:#3B82F6}.dot-food{background:#22C55E}.dot-sug{background:#F97316}
-.tl-body{flex:1;background:#fff;border-radius:14px;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;transition:transform .13s}
-.tl-body:active{transform:scale(.98)}
-.tl-time{font-size:12px;color:#9CA3AF;margin-bottom:3px}
-.tl-title{font-size:15px;font-weight:700}
-.tl-detail{font-size:13px;color:#6B7280;margin-top:2px}
+.tl-item   { display:flex; gap:12px; margin-bottom:12px; }
+.tl-dot    { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.dot-ins   { background:linear-gradient(145deg,#9BA8FF,#6B7FEE); box-shadow:3px 3px 8px rgba(107,127,238,.35); }
+.dot-food  { background:linear-gradient(145deg,#84DAAD,#52B881); box-shadow:3px 3px 8px rgba(82,184,129,.35); }
+.dot-sug   { background:linear-gradient(145deg,#F9B98A,#F08060); box-shadow:3px 3px 8px rgba(240,128,96,.35); }
+.tl-body {
+  flex:1; border-radius:16px; padding:12px 16px; cursor:pointer;
+  background:var(--bg); box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  transition: box-shadow .13s, transform .12s;
+}
+.tl-body:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.98); }
+.tl-time   { font-size:11px; color:var(--muted); margin-bottom:3px; font-weight:500; }
+.tl-title  { font-size:14px; font-weight:700; color:var(--text); }
+.tl-detail { font-size:12px; color:var(--muted); margin-top:3px; }
 
 /* ── Loading / empty ──────────────────────────────────────────────────── */
-.loading,.empty{text-align:center;padding:48px 20px;color:#9CA3AF}
-.spinner{width:38px;height:38px;border:3px solid #E5E7EB;border-top-color:#3B82F6;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty-ico{font-size:48px;margin-bottom:12px}
+.loading, .empty { text-align:center; padding:48px 20px; color:var(--muted); }
+.spinner { width:36px; height:36px; border:3px solid rgba(163,175,200,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 16px; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.empty-ico { font-size:48px; margin-bottom:12px; }
 
 /* ── Toast ────────────────────────────────────────────────────────────── */
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#1F2937;color:#fff;padding:12px 22px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .25s;white-space:nowrap;pointer-events:none}
-.toast.show{transform:translateX(-50%) translateY(0)}
+.toast {
+  position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(70px);
+  padding:12px 24px; border-radius:30px; font-size:14px; font-weight:600; z-index:9999;
+  pointer-events:none; transition:transform .25s; white-space:nowrap;
+  background:var(--bg); color:var(--text);
+  box-shadow: 6px 6px 18px var(--sd), -6px -6px 18px var(--sl);
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
 
-/* ── Edit screen ─────────────────────────────────────────────────────── */
-.del-btn{background:#FEE2E2;color:#DC2626;border:none;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;margin-left:auto}
+/* ── Delete button ───────────────────────────────────────────────────── */
+.del-btn {
+  margin-left:auto; background:var(--bg); color:var(--a-red); border:none;
+  border-radius:12px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer;
+  box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+}
+.del-btn:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
+
+/* ── Hint text ───────────────────────────────────────────────────────── */
+.hint { text-align:center; font-size:12px; color:var(--muted); margin-top:8px; }
 </style>
 </head>
 <body>
 
 <div class="toast" id="toast"></div>
 
-<!-- ═══════════════════════════════════════ MAIN ════════════════════════════════ -->
+<!-- ══════════════════════════════════ MAIN ══════════════════════════════════ -->
 <div class="screen active" id="s-main">
-  <div class="main-hero">
+  <div class="hero">
+    <div class="hero-greeting">Добрый день</div>
     <h1>Дневник диабетика</h1>
-    <div class="time" id="main-time"></div>
+    <div class="hero-time" id="main-time"></div>
   </div>
 
   <div class="reminder" id="reminder" onclick="onReminderClick()">
-    <div class="r-title">⏰ Пора измерить сахар после еды!</div>
+    <div class="r-icon">⏰</div>
+    <div class="r-title">Пора измерить сахар после еды</div>
     <div class="r-sub" id="reminder-text"></div>
   </div>
 
   <div class="main-btns">
-    <button class="main-btn btn-ins" onclick="go('s-ins')">
-      <div class="emoji">💉</div>
-      <div class="lbl">Укол инсулина<div class="sub">Введите дозу и место</div></div>
+    <button class="main-btn" onclick="go('s-ins')">
+      <div class="btn-icon-wrap ic-blue">💉</div>
+      <div class="btn-text-wrap">
+        <div class="btn-label">Укол инсулина</div>
+        <div class="btn-sub">Введите дозу и место</div>
+      </div>
+      <div class="btn-arrow">›</div>
     </button>
-    <button class="main-btn btn-food" onclick="go('s-food')">
-      <div class="emoji">🍽️</div>
-      <div class="lbl">Приём пищи<div class="sub">ХЕ и сахар до еды</div></div>
+
+    <button class="main-btn" onclick="go('s-food')">
+      <div class="btn-icon-wrap ic-green">🍽️</div>
+      <div class="btn-text-wrap">
+        <div class="btn-label">Приём пищи</div>
+        <div class="btn-sub">ХЕ и сахар до еды</div>
+      </div>
+      <div class="btn-arrow">›</div>
     </button>
-    <button class="main-btn btn-sug" onclick="go('s-sug')">
-      <div class="emoji">🩸</div>
-      <div class="lbl">Сахар крови<div class="sub">Внести показание глюкометра</div></div>
+
+    <button class="main-btn" onclick="go('s-sug')">
+      <div class="btn-icon-wrap ic-orange">🩸</div>
+      <div class="btn-text-wrap">
+        <div class="btn-label">Сахар крови</div>
+        <div class="btn-sub">Показание глюкометра</div>
+      </div>
+      <div class="btn-arrow">›</div>
     </button>
   </div>
-  <button class="journal-btn" onclick="go('s-journal')">📊 Открыть журнал за сегодня</button>
+
+  <button class="journal-btn" onclick="go('s-journal')">
+    <span>📊</span> Журнал за сегодня
+  </button>
 </div>
 
-<!-- ═══════════════════════════════════════ INSULIN ══════════════════════════════ -->
+<!-- ══════════════════════════════════ INSULIN ══════════════════════════════ -->
 <div class="screen" id="s-ins">
   <div class="hdr">
     <button class="back" onclick="go('s-main')">←</button>
     <h1>Укол инсулина</h1>
   </div>
 
-  <!-- Insulin type -->
   <div class="card">
     <div class="card-lbl">Вид инсулина</div>
     <div class="type-row">
       <button class="type-opt" id="it-short" onclick="selInsType('short')">
-        <div class="ico">⚡</div>Болюс<br><span style="font-size:11px;font-weight:400;color:#6B7280">короткий</span>
+        <span class="t-ico">⚡</span>Болюс<br><span style="font-size:10px;font-weight:400">короткий</span>
       </button>
       <button class="type-opt" id="it-long" onclick="selInsType('long')">
-        <div class="ico">🌙</div>Базальный<br><span style="font-size:11px;font-weight:400;color:#6B7280">длинный</span>
+        <span class="t-ico">🌙</span>Базальный<br><span style="font-size:10px;font-weight:400">длинный</span>
       </button>
       <button class="type-opt" id="it-other" onclick="selInsType('other')">
-        <div class="ico">💊</div>Другой<br><span style="font-size:11px;font-weight:400;color:#6B7280">свой тип</span>
+        <span class="t-ico">💊</span>Другой<br><span style="font-size:10px;font-weight:400">свой тип</span>
       </button>
     </div>
     <div class="ins-name-row" id="ins-name-row">
@@ -223,13 +393,11 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     </div>
   </div>
 
-  <!-- Suggestion for long insulin -->
   <div class="banner banner-sug" id="ins-suggestion">
-    <div id="ins-sug-text">В прошлый раз введено <strong id="sug-last-val">—</strong> ед. Повторить?</div>
-    <button class="sug-use" onclick="useSuggestedDose()">Использовать</button>
+    <div id="ins-sug-text">Прошлый раз: <strong id="sug-last-val">—</strong> ед. Повторить?</div>
+    <button class="sug-use" onclick="useSuggestedDose()">Использовать →</button>
   </div>
 
-  <!-- Drum picker -->
   <div class="card">
     <div class="card-lbl">Количество единиц</div>
     <div class="drum-wrap" id="drum">
@@ -238,28 +406,25 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
       <div class="drum-sel-band"></div>
       <ul class="drum-list" id="drum-list"></ul>
     </div>
-    <div class="drum-caption">Выбрано: <strong id="drum-val">1</strong> ед.</div>
+    <div class="drum-caption">Выбрано: <strong id="drum-val">1</strong> единиц</div>
   </div>
 
-  <!-- Site warning -->
   <div class="banner banner-warn" id="site-warn">
-    ⚠️ Вы делали укол сюда в прошлый раз. Смените место, чтобы не было уплотнений.
+    ⚠️ Это место вы использовали в прошлый раз — пожалуйста, смените для профилактики уплотнений.
   </div>
 
-  <!-- Site selector -->
   <div class="card">
     <div class="card-lbl">Место укола</div>
     <div class="site-grid" id="site-grid">
-      <button class="site-btn" id="site-sr" onclick="selSite('sr')"><div class="s-ico">🫃</div>Живот<br>правая</button>
-      <button class="site-btn" id="site-sl" onclick="selSite('sl')"><div class="s-ico">🫃</div>Живот<br>левая</button>
-      <button class="site-btn" id="site-ar" onclick="selSite('ar')"><div class="s-ico">💪</div>Рука<br>правая</button>
-      <button class="site-btn" id="site-al" onclick="selSite('al')"><div class="s-ico">💪</div>Рука<br>левая</button>
-      <button class="site-btn" id="site-br" onclick="selSite('br')"><div class="s-ico">🍑</div>Ягодица<br>правая</button>
-      <button class="site-btn" id="site-bl" onclick="selSite('bl')"><div class="s-ico">🍑</div>Ягодица<br>левая</button>
+      <button class="site-btn" id="site-sr" onclick="selSite('sr')"><span class="s-ico">🫃</span>Живот<br>правая</button>
+      <button class="site-btn" id="site-sl" onclick="selSite('sl')"><span class="s-ico">🫃</span>Живот<br>левая</button>
+      <button class="site-btn" id="site-ar" onclick="selSite('ar')"><span class="s-ico">💪</span>Рука<br>правая</button>
+      <button class="site-btn" id="site-al" onclick="selSite('al')"><span class="s-ico">💪</span>Рука<br>левая</button>
+      <button class="site-btn" id="site-br" onclick="selSite('br')"><span class="s-ico">🍑</span>Ягодица<br>правая</button>
+      <button class="site-btn" id="site-bl" onclick="selSite('bl')"><span class="s-ico">🍑</span>Ягодица<br>левая</button>
     </div>
   </div>
 
-  <!-- Time -->
   <div class="card">
     <div class="card-lbl">Время укола</div>
     <div class="time-row">
@@ -269,38 +434,36 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     <input type="datetime-local" class="inp" id="ins-tinp" style="display:none;margin-top:12px">
   </div>
 
-  <!-- Notes -->
   <div class="card">
-    <div class="card-lbl">Заметки (необязательно)</div>
+    <div class="card-lbl">Заметки</div>
     <textarea class="inp" id="ins-notes" placeholder="Самочувствие, причина коррекции…"></textarea>
   </div>
 
-  <button class="submit sub-blue" id="ins-submit" onclick="submitIns()">💾 Сохранить укол</button>
+  <button class="submit sub-blue" id="ins-submit" onclick="submitIns()">Сохранить укол</button>
 </div>
 
-<!-- ═══════════════════════════════════════ FOOD ════════════════════════════════ -->
+<!-- ══════════════════════════════════ FOOD ══════════════════════════════════ -->
 <div class="screen" id="s-food">
   <div class="hdr">
     <button class="back" onclick="go('s-main')">←</button>
     <h1>Приём пищи</h1>
   </div>
 
-  <!-- Sugar before -->
   <div class="card">
     <div class="card-lbl">Сахар перед едой (ммоль/л)</div>
-    <input type="number" class="inp inp-big inp-center" id="food-sug" placeholder="—" step="0.1" min="1" max="35" inputmode="decimal">
-    <div style="font-size:12px;color:#9CA3AF;text-align:center;margin-top:8px">Необязательно, помогает анализу</div>
+    <input type="number" class="inp inp-big inp-center" id="food-sug"
+           placeholder="—" step="0.1" min="1" max="35" inputmode="decimal">
+    <div class="hint">Необязательно, помогает анализу</div>
   </div>
 
-  <!-- HE counter -->
   <div class="card">
     <div class="card-lbl">Хлебные единицы (ХЕ)</div>
     <div class="he-ctrl">
-      <button class="he-btn he-minus" onclick="heStep(-0.5)">−</button>
+      <button class="he-btn" onclick="heStep(-0.5)">−</button>
       <div class="he-val" id="he-val">1</div>
-      <button class="he-btn he-plus" onclick="heStep(0.5)">+</button>
+      <button class="he-btn" onclick="heStep(0.5)">+</button>
     </div>
-    <div style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:8px">1 ХЕ ≈ 10–12 г углеводов</div>
+    <div class="hint">1 ХЕ ≈ 10–12 г углеводов</div>
     <div class="he-presets">
       <button class="he-pre" onclick="heSet(0.5)">½</button>
       <button class="he-pre" onclick="heSet(1)">1</button>
@@ -313,13 +476,11 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     </div>
   </div>
 
-  <!-- Description -->
   <div class="card">
-    <div class="card-lbl">Что ели (необязательно)</div>
+    <div class="card-lbl">Что ели</div>
     <textarea class="inp" id="food-desc" placeholder="Каша, хлеб, суп…"></textarea>
   </div>
 
-  <!-- Time -->
   <div class="card">
     <div class="card-lbl">Время приёма пищи</div>
     <div class="time-row">
@@ -329,40 +490,38 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     <input type="datetime-local" class="inp" id="food-tinp" style="display:none;margin-top:12px">
   </div>
 
-  <button class="submit sub-green" id="food-submit" onclick="submitFood()">💾 Сохранить приём пищи</button>
+  <button class="submit sub-green" id="food-submit" onclick="submitFood()">Сохранить приём пищи</button>
 </div>
 
-<!-- ═══════════════════════════════════════ SUGAR ═══════════════════════════════ -->
+<!-- ══════════════════════════════════ SUGAR ══════════════════════════════════ -->
 <div class="screen" id="s-sug">
   <div class="hdr">
     <button class="back" onclick="go('s-main')">←</button>
     <h1>Сахар крови</h1>
   </div>
 
-  <!-- Value -->
   <div class="card">
     <div class="card-lbl">Уровень глюкозы (ммоль/л)</div>
-    <input type="number" class="sug-big" id="sug-val" placeholder="0.0" step="0.1" min="1" max="35" inputmode="decimal">
+    <input type="number" class="sug-big" id="sug-val"
+           placeholder="0.0" step="0.1" min="1" max="35" inputmode="decimal">
     <div class="sug-indicator" id="sug-ind"></div>
   </div>
 
-  <!-- Type -->
   <div class="card">
     <div class="card-lbl">Когда измерено</div>
     <div class="type-row">
       <button class="type-opt" id="st-manual" onclick="selSugType('manual')">
-        <div class="ico">📏</div>Просто<br>измерение
+        <span class="t-ico">📏</span>Просто<br>измерение
       </button>
       <button class="type-opt" id="st-before" onclick="selSugType('before')">
-        <div class="ico">🍽️</div>Перед<br>едой
+        <span class="t-ico">🍽️</span>Перед<br>едой
       </button>
       <button class="type-opt" id="st-after" onclick="selSugType('after')">
-        <div class="ico">⏰</div>После<br>еды
+        <span class="t-ico">⏰</span>После<br>еды
       </button>
     </div>
   </div>
 
-  <!-- Time -->
   <div class="card">
     <div class="card-lbl">Время измерения</div>
     <div class="time-row">
@@ -372,10 +531,10 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     <input type="datetime-local" class="inp" id="sug-tinp" style="display:none;margin-top:12px">
   </div>
 
-  <button class="submit sub-red" id="sug-submit" onclick="submitSug()">💾 Сохранить показание</button>
+  <button class="submit sub-red" id="sug-submit" onclick="submitSug()">Сохранить показание</button>
 </div>
 
-<!-- ═══════════════════════════════════════ JOURNAL ═════════════════════════════ -->
+<!-- ══════════════════════════════════ JOURNAL ════════════════════════════════ -->
 <div class="screen" id="s-journal">
   <div class="hdr">
     <button class="back" onclick="go('s-main')">←</button>
@@ -389,17 +548,17 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
   </div>
 
   <div class="stats-grid">
-    <div class="stat"><div class="stat-val sv-blue" id="st-ins">—</div><div class="stat-lbl">Инсулин ед.</div></div>
+    <div class="stat"><div class="stat-val sv-blue"  id="st-ins">—</div><div class="stat-lbl">Инсулин ед.</div></div>
     <div class="stat"><div class="stat-val sv-green" id="st-he">—</div><div class="stat-lbl">ХЕ всего</div></div>
-    <div class="stat"><div class="stat-val sv-red" id="st-sug">—</div><div class="stat-lbl">Ср.сахар</div></div>
+    <div class="stat"><div class="stat-val sv-red"   id="st-sug">—</div><div class="stat-lbl">Ср. сахар</div></div>
   </div>
 
   <div id="j-loading" class="loading"><div class="spinner"></div>Загрузка…</div>
-  <div id="j-content" style="display:none"><div class="timeline" id="tl"></div></div>
+  <div id="j-content" style="display:none"><div id="tl"></div></div>
   <div id="j-empty" class="empty" style="display:none"><div class="empty-ico">📋</div>За этот день нет записей</div>
 </div>
 
-<!-- ═══════════════════════════════════════ EDIT ════════════════════════════════ -->
+<!-- ══════════════════════════════════ EDIT ════════════════════════════════════ -->
 <div class="screen" id="s-edit">
   <div class="hdr">
     <button class="back" onclick="go('s-journal')">←</button>
@@ -407,599 +566,390 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
     <button class="del-btn" onclick="confirmDelete()">Удалить</button>
   </div>
   <div id="edit-body"></div>
-  <button class="submit sub-blue" id="edit-submit" onclick="submitEdit()">💾 Сохранить изменения</button>
+  <button class="submit sub-blue" id="edit-submit" onclick="submitEdit()">Сохранить изменения</button>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════════════════════════ */
+/* ═══════════ STATE ════════════════════════════════════════════════════ */
 const S = {
-  insType:    'short',
-  insName:    'Хумалог',
-  selSite:    null,
-  lastSite:   null,
-  lastLong:   0,
-  lastShort:  0,
-  lastLongN:  'Базальный',
-  lastShortN: 'Болюс',
-  he:         1.0,
-  sugType:    'manual',
-  journDate:  todayUTC3(),
-  jData:      null,
-  editType:   null,
-  editId:     null,
-  pendFoodId: null,
-  drumIdx:    1,        // 1 unit selected by default
-  timeCustom: {}        // {ins:bool, food:bool, sug:bool}
+  insType:'short', selSite:null, lastSite:null,
+  lastLong:0, lastShort:0, lastLongN:'Базальный', lastShortN:'Болюс',
+  he:1.0, sugType:'manual',
+  journDate:todayUTC3(), jData:null,
+  editType:null, editId:null, pendFoodId:null,
+  drumIdx:1, timeCustom:{}
 };
+const DRUM_MIN=0, DRUM_MAX=80, ITEM_H=48;
 
-const DRUM_MIN  = 0;
-const DRUM_MAX  = 80;
-const ITEM_H    = 48;
-
-/* ═══════════════════════════════════════════════════════════════════════
-   TIME UTILS
-═══════════════════════════════════════════════════════════════════════ */
-function nowUTC3() {
-  return new Date(Date.now() + 3 * 3600000);
-}
-function todayUTC3() {
-  return nowUTC3().toISOString().slice(0, 10);
-}
-function fmtDisp(isoOrDate) {
-  const d = new Date(typeof isoOrDate === 'string' ? isoOrDate : isoOrDate);
-  const u = new Date(d.getTime() + 3 * 3600000);
-  return pad(u.getUTCDate()) + '.' + pad(u.getUTCMonth()+1) + ' ' +
-         pad(u.getUTCHours()) + ':' + pad(u.getUTCMinutes());
+/* ═══════════ TIME ═════════════════════════════════════════════════════ */
+function nowUTC3()    { return new Date(Date.now() + 3*3600000); }
+function todayUTC3()  { return nowUTC3().toISOString().slice(0,10); }
+function pad(n)       { return String(n).padStart(2,'0'); }
+function fmtDisp(iso) {
+  const u = new Date(new Date(iso).getTime()+3*3600000);
+  return pad(u.getUTCDate())+'.'+pad(u.getUTCMonth()+1)+' '+pad(u.getUTCHours())+':'+pad(u.getUTCMinutes());
 }
 function fmtInput(d) {
-  // datetime-local format: YYYY-MM-DDTHH:mm (displayed as UTC+3)
-  const u = new Date(d.getTime() + 3 * 3600000);
-  return u.toISOString().slice(0, 16);
+  const u = new Date(d.getTime()+3*3600000);
+  return u.toISOString().slice(0,16);
 }
 function inputToUTC(val) {
-  // val is YYYY-MM-DDTHH:mm treated as UTC+3 → convert to UTC ISO
-  return new Date(new Date(val + ':00').getTime() - 3 * 3600000).toISOString();
+  return new Date(new Date(val+':00').getTime()-3*3600000).toISOString();
 }
-function pad(n) { return String(n).padStart(2, '0'); }
 function getSubmitTime(id) {
-  const inp = document.getElementById(id + '-tinp');
-  if (inp && inp.style.display !== 'none' && inp.value) return inputToUTC(inp.value);
+  const i=document.getElementById(id+'-tinp');
+  if(i && i.style.display!=='none' && i.value) return inputToUTC(i.value);
   return new Date().toISOString();
 }
 function refreshTimeDisplays() {
-  const n = nowUTC3();
-  const disp = fmtDisp(n);
-  const inpv = fmtInput(n);
-  ['ins', 'food', 'sug'].forEach(k => {
-    const d = document.getElementById(k + '-tdisp');
-    const i = document.getElementById(k + '-tinp');
-    if (d) d.textContent = disp;
-    if (i && !S.timeCustom[k]) i.value = inpv;
+  const n=nowUTC3(), disp=fmtDisp(n), inpv=fmtInput(n);
+  ['ins','food','sug'].forEach(k=>{
+    const d=document.getElementById(k+'-tdisp');
+    const i=document.getElementById(k+'-tinp');
+    if(d) d.textContent=disp;
+    if(i && !S.timeCustom[k]) i.value=inpv;
   });
 }
 function toggleTime(k) {
-  const inp = document.getElementById(k + '-tinp');
-  const tog = inp.previousElementSibling.lastElementChild;
-  if (inp.style.display === 'none') {
-    inp.value = fmtInput(nowUTC3());
-    inp.style.display = 'block';
-    tog.textContent = 'Сейчас';
-    S.timeCustom[k] = true;
+  const inp=document.getElementById(k+'-tinp');
+  const tog=inp.previousElementSibling.lastElementChild;
+  if(inp.style.display==='none'){
+    inp.value=fmtInput(nowUTC3()); inp.style.display='block';
+    tog.textContent='Сейчас'; S.timeCustom[k]=true;
   } else {
-    inp.style.display = 'none';
-    tog.textContent = 'Изменить';
-    S.timeCustom[k] = false;
+    inp.style.display='none'; tog.textContent='Изменить'; S.timeCustom[k]=false;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   TOAST
-═══════════════════════════════════════════════════════════════════════ */
-let toastTimer;
-function toast(msg, ms = 2600) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+/* ═══════════ TOAST ════════════════════════════════════════════════════ */
+let _tt;
+function toast(msg,ms=2600){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),ms);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   SCREEN NAVIGATION
-═══════════════════════════════════════════════════════════════════════ */
-function go(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+/* ═══════════ NAV ══════════════════════════════════════════════════════ */
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  window.scrollTo(0, 0);
-  if (id === 's-main')    initMain();
-  if (id === 's-ins')     initIns();
-  if (id === 's-food')    initFood();
-  if (id === 's-sug')     initSug();
-  if (id === 's-journal') initJournal();
+  window.scrollTo(0,0);
+  if(id==='s-main')    initMain();
+  if(id==='s-ins')     initIns();
+  if(id==='s-food')    initFood();
+  if(id==='s-sug')     initSug();
+  if(id==='s-journal') initJournal();
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   MAIN SCREEN
-═══════════════════════════════════════════════════════════════════════ */
-function initMain() {
-  const n = nowUTC3();
-  const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  const mons = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  document.getElementById('main-time').textContent =
-    days[n.getUTCDay()] + ', ' + n.getUTCDate() + ' ' + mons[n.getUTCMonth()] + ' · ' +
-    pad(n.getUTCHours()) + ':' + pad(n.getUTCMinutes()) + ' МСК';
+/* ═══════════ MAIN ═════════════════════════════════════════════════════ */
+function initMain(){
+  const n=nowUTC3();
+  const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const mons=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const h=n.getUTCHours();
+  const greet= h<6?'Доброй ночи': h<12?'Доброе утро': h<18?'Добрый день':'Добрый вечер';
+  document.querySelector('#s-main .hero-greeting').textContent=greet;
+  document.getElementById('main-time').textContent=
+    days[n.getUTCDay()]+', '+n.getUTCDate()+' '+mons[n.getUTCMonth()]+
+    ' · '+pad(n.getUTCHours())+':'+pad(n.getUTCMinutes())+' МСК';
   checkPending();
 }
-function checkPending() {
-  google.script.run.withSuccessHandler(r => {
-    if (r.ok && r.pending && r.pending.length) {
-      S.pendFoodId = r.pending[0].id;
-      document.getElementById('reminder-text').textContent =
-        'Поели в ' + fmtDisp(r.pending[0].time) + '. Нажмите, чтобы внести сахар.';
-      document.getElementById('reminder').style.display = 'block';
-    } else {
-      document.getElementById('reminder').style.display = 'none';
-    }
-  }).withFailureHandler(() => {}).getPendingSugars();
+function checkPending(){
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok&&r.pending&&r.pending.length){
+      S.pendFoodId=r.pending[0].id;
+      document.getElementById('reminder-text').textContent=
+        'Поели в '+fmtDisp(r.pending[0].time)+' — нажмите, чтобы внести';
+      document.getElementById('reminder').style.display='block';
+    } else document.getElementById('reminder').style.display='none';
+  }).withFailureHandler(()=>{}).getPendingSugars();
 }
-function onReminderClick() {
-  S.sugType = 'after';
-  go('s-sug');
-}
+function onReminderClick(){ S.sugType='after'; go('s-sug'); }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   DRUM PICKER
-═══════════════════════════════════════════════════════════════════════ */
-let drumDragY0 = 0, drumIdx0 = 0, drumDragging = false, drumVelocity = 0, drumLastY = 0, drumLastT = 0;
-
-function buildDrum() {
-  const list = document.getElementById('drum-list');
-  list.innerHTML = '';
-  for (let v = DRUM_MIN; v <= DRUM_MAX; v++) {
-    const li = document.createElement('li');
-    li.className = 'drum-item';
-    li.textContent = v;
-    li.dataset.v = v;
+/* ═══════════ DRUM ═════════════════════════════════════════════════════ */
+let _dy0=0,_di0=0,_drag=false,_vel=0,_ly=0,_lt=0;
+function buildDrum(){
+  const list=document.getElementById('drum-list');
+  list.innerHTML='';
+  for(let v=DRUM_MIN;v<=DRUM_MAX;v++){
+    const li=document.createElement('li'); li.className='drum-item'; li.textContent=v;
     list.appendChild(li);
   }
   renderDrum(true);
 }
-
-function renderDrum(instant) {
-  const list = document.getElementById('drum-list');
-  const offset = -S.drumIdx * ITEM_H;
-  list.style.transition = instant ? 'none' : 'transform .25s cubic-bezier(.25,.46,.45,.94)';
-  list.style.transform = `translateY(${offset}px)`;
-  list.querySelectorAll('.drum-item').forEach((el, i) => el.classList.toggle('sel', i === S.drumIdx));
-  document.getElementById('drum-val').textContent = S.drumIdx + DRUM_MIN;
+function renderDrum(instant){
+  const list=document.getElementById('drum-list');
+  list.style.transition=instant?'none':'transform .22s cubic-bezier(.25,.46,.45,.94)';
+  list.style.transform=`translateY(${-S.drumIdx*ITEM_H}px)`;
+  list.querySelectorAll('.drum-item').forEach((el,i)=>el.classList.toggle('sel',i===S.drumIdx));
+  document.getElementById('drum-val').textContent=S.drumIdx+DRUM_MIN;
+}
+function clamp(i){ return Math.max(0,Math.min(DRUM_MAX-DRUM_MIN,i)); }
+function dStart(y){ _dy0=y;_di0=S.drumIdx;_drag=true;_vel=0;_ly=y;_lt=Date.now(); }
+function dMove(y){
+  if(!_drag) return;
+  const now=Date.now(),dt=now-_lt||1;
+  _vel=(_ly-y)/dt; _ly=y; _lt=now;
+  S.drumIdx=clamp(_di0+Math.round((_dy0-y)/ITEM_H)); renderDrum(true);
+}
+function dEnd(){ if(!_drag)return; _drag=false; S.drumIdx=clamp(S.drumIdx+Math.round(_vel*100)); renderDrum(false); }
+function attachDrum(){
+  const d=document.getElementById('drum');
+  d.addEventListener('touchstart', e=>{e.preventDefault();dStart(e.touches[0].clientY);},{passive:false});
+  d.addEventListener('touchmove',  e=>{e.preventDefault();dMove(e.touches[0].clientY);},{passive:false});
+  d.addEventListener('touchend',   ()=>dEnd());
+  d.addEventListener('mousedown',  e=>dStart(e.clientY));
+  document.addEventListener('mousemove',e=>{if(_drag)dMove(e.clientY);});
+  document.addEventListener('mouseup',  ()=>{if(_drag)dEnd();});
+  d.addEventListener('wheel',e=>{e.preventDefault();S.drumIdx=clamp(S.drumIdx+(e.deltaY>0?1:-1));renderDrum(false);},{passive:false});
 }
 
-function drumClamp(idx) { return Math.max(0, Math.min(DRUM_MAX - DRUM_MIN, idx)); }
-
-function onDrumStart(clientY) {
-  drumDragY0 = clientY; drumIdx0 = S.drumIdx;
-  drumDragging = true; drumVelocity = 0; drumLastY = clientY; drumLastT = Date.now();
-}
-function onDrumMove(clientY) {
-  if (!drumDragging) return;
-  const now = Date.now(); const dt = now - drumLastT || 1;
-  drumVelocity = (drumLastY - clientY) / dt;
-  drumLastY = clientY; drumLastT = now;
-  const delta = Math.round((drumDragY0 - clientY) / ITEM_H);
-  S.drumIdx = drumClamp(drumIdx0 + delta);
-  renderDrum(true);
-}
-function onDrumEnd() {
-  if (!drumDragging) return;
-  drumDragging = false;
-  // Momentum snap
-  const momentum = Math.round(drumVelocity * 120);
-  S.drumIdx = drumClamp(S.drumIdx + momentum);
-  renderDrum(false);
-}
-
-function attachDrumEvents() {
-  const drum = document.getElementById('drum');
-  drum.addEventListener('touchstart',  e => { e.preventDefault(); onDrumStart(e.touches[0].clientY); }, {passive:false});
-  drum.addEventListener('touchmove',   e => { e.preventDefault(); onDrumMove(e.touches[0].clientY); }, {passive:false});
-  drum.addEventListener('touchend',    () => onDrumEnd());
-  drum.addEventListener('mousedown',   e => { onDrumStart(e.clientY); });
-  document.addEventListener('mousemove', e => { if (drumDragging) onDrumMove(e.clientY); });
-  document.addEventListener('mouseup',   () => { if (drumDragging) onDrumEnd(); });
-  // Wheel support
-  drum.addEventListener('wheel', e => {
-    e.preventDefault();
-    S.drumIdx = drumClamp(S.drumIdx + (e.deltaY > 0 ? 1 : -1));
-    renderDrum(false);
-  }, {passive:false});
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   INSULIN SCREEN
-═══════════════════════════════════════════════════════════════════════ */
-function initIns() {
-  S.selSite = null;
-  S.timeCustom.ins = false;
-  document.getElementById('ins-notes').value = '';
-  document.getElementById('ins-tinp').style.display = 'none';
-  refreshTimeDisplays();
-
-  document.querySelectorAll('.site-btn').forEach(b => b.classList.remove('sel', 'last'));
+/* ═══════════ INSULIN ══════════════════════════════════════════════════ */
+function initIns(){
+  S.selSite=null; S.timeCustom.ins=false;
+  document.getElementById('ins-notes').value='';
+  document.getElementById('ins-tinp').style.display='none';
+  document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('sel','last'));
   document.getElementById('site-warn').classList.remove('visible');
-
-  google.script.run.withSuccessHandler(info => {
-    S.lastSite   = info.lastSite;
-    S.lastLong   = parseInt(info.lastLongDose) || 0;
-    S.lastShort  = parseInt(info.lastShortDose) || 0;
-    S.lastLongN  = info.lastLongName  || 'Базальный';
-    S.lastShortN = info.lastShortName || 'Болюс';
-
-    if (S.lastSite) {
-      const el = document.getElementById('site-' + S.lastSite);
-      if (el) el.classList.add('last');
-    }
+  refreshTimeDisplays();
+  google.script.run.withSuccessHandler(info=>{
+    S.lastSite=info.lastSite; S.lastLong=parseInt(info.lastLongDose)||0;
+    S.lastShort=parseInt(info.lastShortDose)||0;
+    S.lastLongN=info.lastLongName||'Базальный'; S.lastShortN=info.lastShortName||'Болюс';
+    if(S.lastSite){ const el=document.getElementById('site-'+S.lastSite); if(el)el.classList.add('last'); }
     selInsType('short');
-  }).withFailureHandler(() => {
-    selInsType('short');
-  }).getLastInsulinInfo();
+  }).withFailureHandler(()=>selInsType('short')).getLastInsulinInfo();
 }
-
-function selInsType(t) {
-  S.insType = t;
-  ['short','long','other'].forEach(x => {
-    document.getElementById('it-' + x).classList.toggle('sel', x === t);
-  });
-  const nameRow = document.getElementById('ins-name-row');
-  nameRow.classList.toggle('visible', t === 'other');
-
-  const sug = document.getElementById('ins-suggestion');
-  const sugTxt = document.getElementById('sug-last-val');
-  if (t === 'long' && S.lastLong > 0) {
-    sugTxt.textContent = S.lastLong;
-    document.getElementById('ins-sug-text').innerHTML =
-      'В прошлый раз вводили <strong>' + S.lastLong + ' ед. ' + S.lastLongN + '</strong>. Повторить?';
+function selInsType(t){
+  S.insType=t;
+  ['short','long','other'].forEach(x=>document.getElementById('it-'+x).classList.toggle('sel',x===t));
+  document.getElementById('ins-name-row').classList.toggle('visible',t==='other');
+  const sug=document.getElementById('ins-suggestion');
+  const dose=t==='long'?S.lastLong:S.lastShort;
+  const name=t==='long'?S.lastLongN:S.lastShortN;
+  if(dose>0&&t!=='other'){
+    document.getElementById('ins-sug-text').innerHTML=
+      'Прошлый раз: <strong>'+dose+' ед. '+name+'</strong>. Повторить?';
     sug.classList.add('visible');
-  } else if (t === 'short' && S.lastShort > 0) {
-    sugTxt.textContent = S.lastShort;
-    document.getElementById('ins-sug-text').innerHTML =
-      'В прошлый раз вводили <strong>' + S.lastShort + ' ед. ' + S.lastShortN + '</strong>. Повторить?';
-    sug.classList.add('visible');
-  } else {
-    sug.classList.remove('visible');
-  }
+  } else sug.classList.remove('visible');
+}
+function useSuggestedDose(){
+  S.drumIdx=clamp(S.insType==='long'?S.lastLong:S.lastShort); renderDrum(false);
+}
+function selSite(s){
+  S.selSite=s;
+  document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('site-'+s).classList.add('sel');
+  document.getElementById('site-warn').classList.toggle('visible',s===S.lastSite);
+}
+function getInsName(){
+  if(S.insType==='long')  return S.lastLongN||'Базальный';
+  if(S.insType==='short') return S.lastShortN||'Болюс';
+  return document.getElementById('ins-name').value.trim()||'Другой';
+}
+function submitIns(){
+  const units=S.drumIdx+DRUM_MIN;
+  if(!S.selSite){toast('⚠️ Выберите место укола');return;}
+  if(!units){toast('⚠️ Выберите количество единиц');return;}
+  const btn=document.getElementById('ins-submit');
+  btn.disabled=true; btn.textContent='Сохранение…';
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить укол';
+    if(r.ok){toast('✅ Укол сохранён');setTimeout(()=>go('s-main'),700);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить укол';toast('❌ Ошибка');})
+  .saveInsulin({time:getSubmitTime('ins'),insulinType:S.insType,insulinName:getInsName(),
+    units,site:S.selSite,notes:document.getElementById('ins-notes').value});
 }
 
-function useSuggestedDose() {
-  const dose = S.insType === 'long' ? S.lastLong : S.lastShort;
-  S.drumIdx = drumClamp(dose);
-  renderDrum(false);
-}
-
-function selSite(site) {
-  S.selSite = site;
-  document.querySelectorAll('.site-btn').forEach(b => b.classList.remove('sel'));
-  document.getElementById('site-' + site).classList.add('sel');
-  document.getElementById('site-warn').classList.toggle('visible', site === S.lastSite);
-}
-
-function getInsName() {
-  if (S.insType === 'long')  return S.lastLongN  || 'Базальный';
-  if (S.insType === 'short') return S.lastShortN || 'Болюс';
-  return document.getElementById('ins-name').value.trim() || 'Другой';
-}
-
-function submitIns() {
-  const units = S.drumIdx + DRUM_MIN;
-  if (!S.selSite)   { toast('⚠️ Выберите место укола'); return; }
-  if (units === 0)  { toast('⚠️ Выберите количество единиц'); return; }
-
-  const btn = document.getElementById('ins-submit');
-  btn.disabled = true; btn.textContent = 'Сохранение…';
-
-  const data = {
-    time:        getSubmitTime('ins'),
-    insulinType: S.insType,
-    insulinName: getInsName(),
-    units:       units,
-    site:        S.selSite,
-    notes:       document.getElementById('ins-notes').value
-  };
-
-  google.script.run.withSuccessHandler(r => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить укол';
-    if (r.ok) { toast('✅ Укол сохранён!'); setTimeout(() => go('s-main'), 700); }
-    else toast('❌ Ошибка: ' + r.error);
-  }).withFailureHandler(() => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить укол';
-    toast('❌ Ошибка сохранения');
-  }).saveInsulin(data);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   FOOD SCREEN
-═══════════════════════════════════════════════════════════════════════ */
-function initFood() {
-  S.he = 1.0; S.timeCustom.food = false;
-  updHE();
-  document.getElementById('food-sug').value = '';
-  document.getElementById('food-desc').value = '';
-  document.getElementById('food-tinp').style.display = 'none';
+/* ═══════════ FOOD ═════════════════════════════════════════════════════ */
+function initFood(){
+  S.he=1; S.timeCustom.food=false;
+  updHE(); document.getElementById('food-sug').value='';
+  document.getElementById('food-desc').value='';
+  document.getElementById('food-tinp').style.display='none';
   refreshTimeDisplays();
 }
-function heStep(d) { S.he = Math.max(0, Math.round((S.he + d) * 2) / 2); updHE(); }
-function heSet(v)  { S.he = v; updHE(); }
-function updHE() {
-  document.getElementById('he-val').textContent = S.he % 1 === 0 ? S.he : S.he.toFixed(1);
-}
-function submitFood() {
-  const btn = document.getElementById('food-submit');
-  btn.disabled = true; btn.textContent = 'Сохранение…';
-  const data = {
-    time:        getSubmitTime('food'),
-    he:          S.he,
-    description: document.getElementById('food-desc').value,
-    sugarBefore: document.getElementById('food-sug').value
-  };
-  google.script.run.withSuccessHandler(r => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить приём пищи';
-    if (r.ok) { toast('✅ Приём пищи сохранён!'); setTimeout(() => go('s-main'), 700); }
-    else toast('❌ Ошибка: ' + r.error);
-  }).withFailureHandler(() => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить приём пищи';
-    toast('❌ Ошибка сохранения');
-  }).saveFood(data);
+function heStep(d){ S.he=Math.max(0,Math.round((S.he+d)*2)/2); updHE(); }
+function heSet(v){ S.he=v; updHE(); }
+function updHE(){ document.getElementById('he-val').textContent=S.he%1===0?S.he:S.he.toFixed(1); }
+function submitFood(){
+  const btn=document.getElementById('food-submit');
+  btn.disabled=true; btn.textContent='Сохранение…';
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить приём пищи';
+    if(r.ok){toast('✅ Приём пищи сохранён');setTimeout(()=>go('s-main'),700);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить приём пищи';toast('❌ Ошибка');})
+  .saveFood({time:getSubmitTime('food'),he:S.he,
+    description:document.getElementById('food-desc').value,
+    sugarBefore:document.getElementById('food-sug').value});
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   SUGAR SCREEN
-═══════════════════════════════════════════════════════════════════════ */
-function initSug() {
-  S.timeCustom.sug = false;
-  document.getElementById('sug-val').value = '';
-  document.getElementById('sug-ind').textContent = '';
-  document.getElementById('sug-tinp').style.display = 'none';
+/* ═══════════ SUGAR ════════════════════════════════════════════════════ */
+function initSug(){
+  S.timeCustom.sug=false;
+  document.getElementById('sug-val').value='';
+  document.getElementById('sug-ind').textContent='';
+  document.getElementById('sug-tinp').style.display='none';
   refreshTimeDisplays();
-  selSugType(S.sugType || 'manual');
+  selSugType(S.sugType||'manual');
 }
-function selSugType(t) {
-  S.sugType = t;
-  ['manual','before','after'].forEach(x =>
-    document.getElementById('st-' + x).classList.toggle('sel', x === t));
+function selSugType(t){
+  S.sugType=t;
+  ['manual','before','after'].forEach(x=>document.getElementById('st-'+x).classList.toggle('sel',x===t));
 }
-document.getElementById('sug-val').addEventListener('input', function() {
-  const v = parseFloat(this.value);
-  const el = document.getElementById('sug-ind');
-  if (!v) { el.textContent = ''; el.style.color = ''; return; }
-  if (v < 3.9)      { el.textContent = '🔴 Гипогликемия!';  el.style.color = '#DC2626'; }
-  else if (v <= 5.5) { el.textContent = '🟢 Норма';          el.style.color = '#15803D'; }
-  else if (v <= 7.8) { el.textContent = '🟡 Немного повышен';el.style.color = '#CA8A04'; }
-  else if (v <= 11)  { el.textContent = '🟠 Повышен';        el.style.color = '#C2410C'; }
-  else               { el.textContent = '🔴 Высокий!';       el.style.color = '#DC2626'; }
+document.getElementById('sug-val').addEventListener('input',function(){
+  const v=parseFloat(this.value),el=document.getElementById('sug-ind');
+  if(!v){el.textContent='';el.style.color='';return;}
+  if(v<3.9)      {el.textContent='🔴 Гипогликемия!'; el.style.color='#E05050';}
+  else if(v<=5.5){el.textContent='🟢 Норма';          el.style.color='#4CAF7A';}
+  else if(v<=7.8){el.textContent='🟡 Немного повышен';el.style.color='#C09020';}
+  else if(v<=11) {el.textContent='🟠 Повышен';        el.style.color='#D07030';}
+  else           {el.textContent='🔴 Высокий!';       el.style.color='#E05050';}
 });
-function submitSug() {
-  const val = parseFloat(document.getElementById('sug-val').value);
-  if (!val || val < 1 || val > 35) { toast('⚠️ Введите значение от 1 до 35'); return; }
-  const btn = document.getElementById('sug-submit');
-  btn.disabled = true; btn.textContent = 'Сохранение…';
-  const data = {
-    time:     getSubmitTime('sug'),
-    value:    val,
-    sugarType: S.sugType,
-    foodId:   S.sugType === 'after' ? S.pendFoodId : null
-  };
-  google.script.run.withSuccessHandler(r => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить показание';
-    if (r.ok) {
-      S.pendFoodId = null; S.sugType = 'manual';
-      toast('✅ Сахар сохранён!'); setTimeout(() => go('s-main'), 700);
-    } else toast('❌ Ошибка: ' + r.error);
-  }).withFailureHandler(() => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить показание';
-    toast('❌ Ошибка сохранения');
-  }).saveSugar(data);
+function submitSug(){
+  const val=parseFloat(document.getElementById('sug-val').value);
+  if(!val||val<1||val>35){toast('⚠️ Введите значение от 1 до 35');return;}
+  const btn=document.getElementById('sug-submit');
+  btn.disabled=true; btn.textContent='Сохранение…';
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить показание';
+    if(r.ok){S.pendFoodId=null;S.sugType='manual';toast('✅ Сахар сохранён');setTimeout(()=>go('s-main'),700);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить показание';toast('❌ Ошибка');})
+  .saveSugar({time:getSubmitTime('sug'),value:val,sugarType:S.sugType,foodId:S.sugType==='after'?S.pendFoodId:null});
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   JOURNAL
-═══════════════════════════════════════════════════════════════════════ */
-function initJournal() {
-  renderDateLabel();
-  loadJournal();
+/* ═══════════ JOURNAL ══════════════════════════════════════════════════ */
+function initJournal(){ renderDateLabel(); loadJournal(); }
+function renderDateLabel(){
+  const p=S.journDate.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
+  const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const mons=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  document.getElementById('dn-label').textContent=days[d.getDay()]+' '+d.getDate()+' '+mons[d.getMonth()]+' '+d.getFullYear();
 }
-function renderDateLabel() {
-  const p = S.journDate.split('-');
-  const d = new Date(+p[0], +p[1]-1, +p[2]);
-  const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  const mons = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-  document.getElementById('dn-label').textContent =
-    days[d.getDay()] + ' ' + d.getDate() + ' ' + mons[d.getMonth()] + ' ' + d.getFullYear();
+function navDate(delta){
+  const p=S.journDate.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
+  d.setDate(d.getDate()+delta);
+  S.journDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  renderDateLabel(); loadJournal();
 }
-function navDate(delta) {
-  const p = S.journDate.split('-');
-  const d = new Date(+p[0], +p[1]-1, +p[2]);
-  d.setDate(d.getDate() + delta);
-  S.journDate = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
-  renderDateLabel();
-  loadJournal();
+function loadJournal(){
+  ['j-loading','j-content','j-empty'].forEach((id,i)=>document.getElementById(id).style.display=i===0?'block':'none');
+  google.script.run.withSuccessHandler(r=>{
+    document.getElementById('j-loading').style.display='none';
+    if(!r.ok){toast('❌ '+r.error);return;}
+    S.jData=r;
+    document.getElementById('st-ins').textContent=r.totalInsulin||'0';
+    document.getElementById('st-he').textContent=r.totalHE%1===0?r.totalHE:r.totalHE.toFixed(1);
+    document.getElementById('st-sug').textContent=r.avgSugar?r.avgSugar.toFixed(1):'—';
+    const all=[
+      ...r.insulin.map(x=>({...x,cat:'ins'})),
+      ...r.food.map(x=>({...x,cat:'food'})),
+      ...r.sugar.map(x=>({...x,cat:'sug'}))
+    ].sort((a,b)=>new Date(a.time)-new Date(b.time));
+    if(!all.length){document.getElementById('j-empty').style.display='block';return;}
+    document.getElementById('j-content').style.display='block';
+    const tl=document.getElementById('tl'); tl.innerHTML='';
+    all.forEach(item=>tl.appendChild(buildTL(item)));
+  }).withFailureHandler(()=>{document.getElementById('j-loading').style.display='none';toast('❌ Ошибка загрузки');})
+  .getSummary(S.journDate);
 }
-function loadJournal() {
-  document.getElementById('j-loading').style.display  = 'block';
-  document.getElementById('j-content').style.display  = 'none';
-  document.getElementById('j-empty').style.display    = 'none';
-  google.script.run.withSuccessHandler(r => {
-    document.getElementById('j-loading').style.display = 'none';
-    if (!r.ok) { toast('❌ ' + r.error); return; }
-    S.jData = r;
-
-    document.getElementById('st-ins').textContent = r.totalInsulin || '0';
-    document.getElementById('st-he').textContent  =
-      r.totalHE % 1 === 0 ? r.totalHE : r.totalHE.toFixed(1);
-    document.getElementById('st-sug').textContent =
-      r.avgSugar ? r.avgSugar.toFixed(1) : '—';
-
-    const all = [
-      ...r.insulin.map(x => ({...x, cat:'ins'})),
-      ...r.food.map(x    => ({...x, cat:'food'})),
-      ...r.sugar.map(x   => ({...x, cat:'sug'}))
-    ].sort((a, b) => new Date(a.time) - new Date(b.time));
-
-    if (!all.length) { document.getElementById('j-empty').style.display = 'block'; return; }
-    document.getElementById('j-content').style.display = 'block';
-
-    const tl = document.getElementById('tl');
-    tl.innerHTML = '';
-    all.forEach(item => tl.appendChild(buildTLItem(item)));
-  }).withFailureHandler(() => {
-    document.getElementById('j-loading').style.display = 'none';
-    toast('❌ Ошибка загрузки');
-  }).getSummary(S.journDate);
-}
-
-const SITE_LABELS = {
-  sr:'Живот (право)', sl:'Живот (лево)',
-  ar:'Рука правая', al:'Рука левая',
-  br:'Ягодица правая', bl:'Ягодица левая'
-};
-
-function buildTLItem(item) {
-  const wrap = document.createElement('div');
-  wrap.className = 'tl-item';
-  let title = '', detail = '';
-  if (item.cat === 'ins') {
-    const tl = item.insulinType === 'long' ? 'Базальный' : (item.insulinType === 'short' ? 'Болюс' : 'Инсулин');
-    title = tl + ' ' + (item.insulinName ? '(' + item.insulinName + ')' : '') + ' — ' + item.units + ' ед.';
-    detail = (SITE_LABELS[item.site] || item.site || '') + (item.notes ? ' · ' + item.notes : '');
-  } else if (item.cat === 'food') {
-    const he = parseFloat(item.he);
-    title = (he % 1 === 0 ? he : he.toFixed(1)) + ' ХЕ';
-    detail = (item.sugarBefore ? 'Сахар до: ' + item.sugarBefore + ' · ' : '') + (item.description || '');
+const SITES={sr:'Живот (право)',sl:'Живот (лево)',ar:'Рука правая',al:'Рука левая',br:'Ягодица правая',bl:'Ягодица левая'};
+function buildTL(item){
+  const w=document.createElement('div'); w.className='tl-item';
+  let title='',detail='';
+  if(item.cat==='ins'){
+    const tl=item.insulinType==='long'?'Базальный':(item.insulinType==='short'?'Болюс':'Инсулин');
+    title=tl+(item.insulinName?' ('+item.insulinName+')':'')+' — '+item.units+' ед.';
+    detail=(SITES[item.site]||item.site||'')+(item.notes?' · '+item.notes:'');
+  } else if(item.cat==='food'){
+    const he=parseFloat(item.he);
+    title=(he%1===0?he:he.toFixed(1))+' ХЕ';
+    detail=(item.sugarBefore?'Сахар до: '+item.sugarBefore+' · ':'')+( item.description||'');
   } else {
-    const v = parseFloat(item.value);
-    const mark = v < 3.9 ? '🔴' : v <= 5.5 ? '🟢' : v <= 7.8 ? '🟡' : '🟠';
-    title = 'Сахар: ' + v + ' ммоль/л';
-    const tl = {manual:'', before:'перед едой', after:'после еды'};
-    detail = mark + (tl[item.sugarType] ? ' ' + tl[item.sugarType] : '');
+    const v=parseFloat(item.value),mark=v<3.9?'🔴':v<=5.5?'🟢':v<=7.8?'🟡':'🟠';
+    title='Сахар: '+v+' ммоль/л';
+    const tl={manual:'',before:'перед едой',after:'после еды'};
+    detail=mark+(tl[item.sugarType]?' '+tl[item.sugarType]:'');
   }
-  const dotCls = {ins:'dot-ins', food:'dot-food', sug:'dot-sug'};
-  const emojis = {ins:'💉', food:'🍽️', sug:'🩸'};
-  wrap.innerHTML = `
-    <div class="tl-dot ${dotCls[item.cat]}">${emojis[item.cat]}</div>
+  const dc={ins:'dot-ins',food:'dot-food',sug:'dot-sug'},em={ins:'💉',food:'🍽️',sug:'🩸'};
+  w.innerHTML=`<div class="tl-dot ${dc[item.cat]}">${em[item.cat]}</div>
     <div class="tl-body" onclick="openEdit('${item.cat}','${item.id}')">
       <div class="tl-time">${fmtDisp(item.time)}</div>
       <div class="tl-title">${title}</div>
-      ${detail ? '<div class="tl-detail">' + detail + '</div>' : ''}
+      ${detail?'<div class="tl-detail">'+detail+'</div>':''}
     </div>`;
-  return wrap;
+  return w;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   EDIT
-═══════════════════════════════════════════════════════════════════════ */
-function openEdit(cat, id) {
-  S.editType = cat; S.editId = id;
-  const titles = {ins:'Редактировать укол', food:'Редактировать приём пищи', sug:'Редактировать сахар'};
-  document.getElementById('edit-title').textContent = titles[cat];
-
-  let rec = null;
-  if (cat === 'ins')  rec = S.jData.insulin.find(r => r.id === id);
-  if (cat === 'food') rec = S.jData.food.find(r => r.id === id);
-  if (cat === 'sug')  rec = S.jData.sugar.find(r => r.id === id);
-  if (!rec) return;
-
-  const tv = fmtInput(new Date(rec.time));
-  let html = `<div class="card"><div class="card-lbl">Время</div>
-    <input type="datetime-local" class="inp" id="e-time" value="${tv}"></div>`;
-
-  if (cat === 'ins') {
-    const sites = [['sr','Живот правая'],['sl','Живот левая'],['ar','Рука правая'],['al','Рука левая'],['br','Ягодица правая'],['bl','Ягодица левая']];
-    const sOpts = sites.map(([v,l]) => `<option value="${v}" ${rec.site===v?'selected':''}>${l}</option>`).join('');
-    html += `
-      <div class="card"><div class="card-lbl">Вид</div>
-        <select class="inp" id="e-itype">
-          <option value="short" ${rec.insulinType==='short'?'selected':''}>Болюс (короткий)</option>
-          <option value="long" ${rec.insulinType==='long'?'selected':''}>Базальный (длинный)</option>
-          <option value="other" ${rec.insulinType==='other'?'selected':''}>Другой</option>
-        </select></div>
-      <div class="card"><div class="card-lbl">Название</div>
-        <input class="inp" id="e-iname" value="${rec.insulinName || ''}"></div>
-      <div class="card"><div class="card-lbl">Единицы</div>
-        <input type="number" class="inp inp-big inp-center" id="e-units" value="${rec.units}" min="0" max="80"></div>
-      <div class="card"><div class="card-lbl">Место</div>
-        <select class="inp" id="e-site">${sOpts}</select></div>
-      <div class="card"><div class="card-lbl">Заметки</div>
-        <textarea class="inp" id="e-notes">${rec.notes || ''}</textarea></div>`;
-  } else if (cat === 'food') {
-    html += `
-      <div class="card"><div class="card-lbl">ХЕ</div>
-        <input type="number" class="inp inp-big inp-center" id="e-he" value="${rec.he}" min="0" max="30" step="0.5"></div>
-      <div class="card"><div class="card-lbl">Что ели</div>
-        <textarea class="inp" id="e-desc">${rec.description || ''}</textarea></div>
-      <div class="card"><div class="card-lbl">Сахар до (ммоль/л)</div>
-        <input type="number" class="inp inp-center" id="e-sbefore" value="${rec.sugarBefore || ''}" step="0.1"></div>`;
+/* ═══════════ EDIT ═════════════════════════════════════════════════════ */
+function openEdit(cat,id){
+  S.editType=cat; S.editId=id;
+  document.getElementById('edit-title').textContent={ins:'Редактировать укол',food:'Редактировать приём пищи',sug:'Редактировать сахар'}[cat];
+  let rec=null;
+  if(cat==='ins')  rec=S.jData.insulin.find(r=>r.id===id);
+  if(cat==='food') rec=S.jData.food.find(r=>r.id===id);
+  if(cat==='sug')  rec=S.jData.sugar.find(r=>r.id===id);
+  if(!rec) return;
+  const tv=fmtInput(new Date(rec.time));
+  let html=`<div class="card"><div class="card-lbl">Время</div><input type="datetime-local" class="inp" id="e-time" value="${tv}"></div>`;
+  if(cat==='ins'){
+    const sOpts=[['sr','Живот правая'],['sl','Живот левая'],['ar','Рука правая'],['al','Рука левая'],['br','Ягодица правая'],['bl','Ягодица левая']]
+      .map(([v,l])=>`<option value="${v}" ${rec.site===v?'selected':''}>${l}</option>`).join('');
+    html+=`<div class="card"><div class="card-lbl">Вид</div>
+      <select class="inp" id="e-itype">
+        <option value="short" ${rec.insulinType==='short'?'selected':''}>Болюс (короткий)</option>
+        <option value="long"  ${rec.insulinType==='long'?'selected':''}>Базальный (длинный)</option>
+        <option value="other" ${rec.insulinType==='other'?'selected':''}>Другой</option>
+      </select></div>
+      <div class="card"><div class="card-lbl">Название</div><input class="inp" id="e-iname" value="${rec.insulinName||''}"></div>
+      <div class="card"><div class="card-lbl">Единицы</div><input type="number" class="inp inp-big inp-center" id="e-units" value="${rec.units}" min="0" max="80"></div>
+      <div class="card"><div class="card-lbl">Место</div><select class="inp" id="e-site">${sOpts}</select></div>
+      <div class="card"><div class="card-lbl">Заметки</div><textarea class="inp" id="e-notes">${rec.notes||''}</textarea></div>`;
+  } else if(cat==='food'){
+    html+=`<div class="card"><div class="card-lbl">ХЕ</div><input type="number" class="inp inp-big inp-center" id="e-he" value="${rec.he}" min="0" max="30" step="0.5"></div>
+      <div class="card"><div class="card-lbl">Что ели</div><textarea class="inp" id="e-desc">${rec.description||''}</textarea></div>
+      <div class="card"><div class="card-lbl">Сахар до (ммоль/л)</div><input type="number" class="inp inp-center" id="e-sbefore" value="${rec.sugarBefore||''}" step="0.1"></div>`;
   } else {
-    html += `<div class="card"><div class="card-lbl">Значение (ммоль/л)</div>
-      <input type="number" class="sug-big" id="e-sval" value="${rec.value}" step="0.1"></div>`;
+    html+=`<div class="card"><div class="card-lbl">Значение (ммоль/л)</div><input type="number" class="sug-big" id="e-sval" value="${rec.value}" step="0.1"></div>`;
   }
-
-  document.getElementById('edit-body').innerHTML = html;
+  document.getElementById('edit-body').innerHTML=html;
   go('s-edit');
 }
-
-function submitEdit() {
-  const timeInp = document.getElementById('e-time');
-  const time = timeInp && timeInp.value ? inputToUTC(timeInp.value) : null;
-  let patch = { time };
-
-  if (S.editType === 'ins') {
-    patch.insulinType = document.getElementById('e-itype').value;
-    patch.insulinName = document.getElementById('e-iname').value;
-    patch.units       = document.getElementById('e-units').value;
-    patch.site        = document.getElementById('e-site').value;
-    patch.notes       = document.getElementById('e-notes').value;
-  } else if (S.editType === 'food') {
-    patch.he          = document.getElementById('e-he').value;
-    patch.description = document.getElementById('e-desc').value;
-    patch.sugarBefore = document.getElementById('e-sbefore').value;
-  } else {
-    patch.value       = document.getElementById('e-sval').value;
-  }
-
-  const btn = document.getElementById('edit-submit');
-  btn.disabled = true; btn.textContent = 'Сохранение…';
-  google.script.run.withSuccessHandler(r => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить изменения';
-    if (r.ok) { toast('✅ Обновлено!'); setTimeout(() => go('s-journal'), 600); }
-    else toast('❌ ' + r.error);
-  }).withFailureHandler(() => {
-    btn.disabled = false; btn.textContent = '💾 Сохранить изменения';
-    toast('❌ Ошибка');
-  }).updateRecord(S.editType === 'ins' ? 'insulin' : S.editType, S.editId, patch);
+function submitEdit(){
+  const tv=document.getElementById('e-time');
+  const time=tv&&tv.value?inputToUTC(tv.value):null;
+  let patch={time};
+  if(S.editType==='ins'){patch.insulinType=document.getElementById('e-itype').value;patch.insulinName=document.getElementById('e-iname').value;patch.units=document.getElementById('e-units').value;patch.site=document.getElementById('e-site').value;patch.notes=document.getElementById('e-notes').value;}
+  else if(S.editType==='food'){patch.he=document.getElementById('e-he').value;patch.description=document.getElementById('e-desc').value;patch.sugarBefore=document.getElementById('e-sbefore').value;}
+  else{patch.value=document.getElementById('e-sval').value;}
+  const btn=document.getElementById('edit-submit'); btn.disabled=true; btn.textContent='Сохранение…';
+  const type=S.editType==='ins'?'insulin':S.editType;
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить изменения';
+    if(r.ok){toast('✅ Обновлено');setTimeout(()=>go('s-journal'),600);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить изменения';toast('❌ Ошибка');})
+  .updateRecord(type,S.editId,patch);
+}
+function confirmDelete(){
+  if(!confirm('Удалить эту запись?')) return;
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok){toast('🗑️ Запись удалена');go('s-journal');}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>toast('❌ Ошибка удаления'))
+  .deleteRecord(S.editType==='ins'?'insulin':S.editType,S.editId);
 }
 
-function confirmDelete() {
-  if (!confirm('Удалить эту запись?')) return;
-  const type = S.editType === 'ins' ? 'insulin' : S.editType;
-  google.script.run.withSuccessHandler(r => {
-    if (r.ok) { toast('🗑️ Запись удалена'); go('s-journal'); }
-    else toast('❌ ' + r.error);
-  }).withFailureHandler(() => toast('❌ Ошибка удаления'))
-    .deleteRecord(type, S.editId);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  buildDrum();
-  attachDrumEvents();
-  initMain();
-  refreshTimeDisplays();
-  setInterval(() => {
+/* ═══════════ INIT ═════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  buildDrum(); attachDrum(); initMain(); refreshTimeDisplays();
+  setInterval(()=>{
     refreshTimeDisplays();
-    if (document.getElementById('s-main').classList.contains('active')) initMain();
-  }, 60000);
+    if(document.getElementById('s-main').classList.contains('active')) initMain();
+  },60000);
 });
 </script>
 </body>
