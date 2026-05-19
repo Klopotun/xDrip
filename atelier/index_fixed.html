@@ -1432,8 +1432,9 @@ function buildAdminDetail(){
               ${b?.size||'б/р'} · ${d.qty} шт${coeffChanged?` · срочность изменена (×${d.order_coeff} вместо ×${b.order_coeff})`:''}
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
+          <div style="display:flex;align-items:center;gap:6px">
             <div class="mono c-gn">${fmt(Number(d.total))} ₽</div>
+            <button class="btn-sec" style="padding:5px 9px;font-size:12px" title="Вернуть в работу / Брак" onclick="openReturnModal('${d.id}','${d.batch_id}',${Number(d.qty)},${Number(d.total)})">↩</button>
             <button class="btn-del" onclick="adminDelDelivery('${d.id}','${d.batch_id}',${Math.max(0,Number(b?.qty_delivered||0)-Number(d.qty))})">✕</button>
           </div>
         </div>`;
@@ -1822,6 +1823,65 @@ function buildAdminDelivHistory(emp){
   return html;
 }
 
+let _retDelivId=null,_retBatchId=null,_retMaxQty=0,_retTotal=0;
+function openReturnModal(delivId,batchId,qty,total){
+  _retDelivId=delivId;_retBatchId=batchId;_retMaxQty=qty;_retTotal=total;
+  const b=S.batches.find(x=>String(x.id)===String(batchId));
+  const d=S.deliveries.find(x=>String(x.id)===String(delivId));
+  const pricePerItem=qty>0?Math.round(total/qty):0;
+  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Вернуть / Брак</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">${b?.product||'—'} ${b?.size||''}</div>
+      <div style="font-size:12px;color:var(--dm);margin-bottom:16px">Сдано: ${qty} шт · ${fmt(total)} ₽ · ~${fmt(pricePerItem)} ₽/шт</div>
+      <div class="fg"><label class="lbl">Сколько штук вернуть (макс. ${qty})</label>
+        <input class="inp" type="number" id="ret_qty" value="${qty}" min="1" max="${qty}" autocomplete="off">
+      </div>
+      <div class="fg"><label class="lbl">Причина</label>
+        <div style="display:flex;gap:8px">
+          <label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--s2);border-radius:12px;padding:12px 14px;cursor:pointer">
+            <input type="radio" name="ret_type" value="work" checked> <span>↩ Вернуть в работу</span>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:8px;background:var(--s2);border-radius:12px;padding:12px 14px;cursor:pointer">
+            <input type="radio" name="ret_type" value="defect"> <span>🗑 Брак</span>
+          </label>
+        </div>
+      </div>
+      <div id="ret_hint" style="font-size:12px;color:var(--dm);margin-bottom:12px;padding:10px 12px;background:rgba(255,59,48,.07);border-radius:10px">
+        <b>Вернуть в работу:</b> изделия вернутся в остаток пачки — портной должен будет их досдать.<br>
+        <b>Брак:</b> изделия списываются — объём пачки уменьшится, досдавать не нужно.
+      </div>
+      <div class="row2">
+        <button class="btn-sec" onclick="closeModal()">Отмена</button>
+        <button class="btn" onclick="submitReturn()">Подтвердить</button>
+      </div>
+    </div></div>`);
+}
+async function submitReturn(){
+  if(_busy)return;
+  const returnQty=Number($('ret_qty')?.value||0);
+  const isDefect=document.querySelector('input[name="ret_type"]:checked')?.value==='defect';
+  if(!returnQty||returnQty<1||returnQty>_retMaxQty){alert('Укажи корректное количество (1–'+_retMaxQty+')');return;}
+  try{
+    await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect});
+    // Update local state
+    const d=S.deliveries.find(x=>String(x.id)===String(_retDelivId));
+    const b=S.batches.find(x=>String(x.id)===String(_retBatchId));
+    if(d&&b){
+      if(returnQty===_retMaxQty){
+        S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(_retDelivId));
+      } else {
+        d.qty=_retMaxQty-returnQty;
+        d.total=Math.round(_retTotal*d.qty/_retMaxQty);
+      }
+      b.qty_delivered=Math.max(0,Number(b.qty_delivered||0)-returnQty);
+      if(isDefect) b.qty_total=Math.max(b.qty_delivered,Number(b.qty_total||0)-returnQty);
+    }
+    closeModal();
+    toast(isDefect?'🗑 Брак списан':'↩ Возвращено в работу');
+    renderAdminContent();
+  }catch(e){alert(e.message);}
+}
 async function adminDelBatch(id){if(!confirm('Удалить пачку?'))return;try{await api('delBatch',{id});S.batches=S.batches.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
 async function adminDelDelivery(id,batchId,newQty){if(!confirm('Удалить сдачу?'))return;try{await api('delDelivery',{id,batchId,newQtyDelivered:Math.max(0,newQty)});S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(id));const b=S.batches.find(x=>String(x.id)===String(batchId));if(b)b.qty_delivered=Math.max(0,newQty);renderAdminContent();}catch(e){alert(e.message);}}
 async function adminDelDayLog(id){if(!confirm('Удалить?'))return;try{await api('delDayLog',{id});S.dayLogs=S.dayLogs.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}

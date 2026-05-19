@@ -88,6 +88,37 @@ function dispatch(req) {
       delRow('_deliveries', req.id);
       updRow('_batches', req.batchId, {qty_delivered: req.newQtyDelivered});
     });
+    case 'returnDelivery': return withLock(()=>{
+      // Partially or fully return items from a delivery back to batch
+      // req: { delivId, batchId, returnQty, isDefect }
+      var delivRows = getRows('_deliveries');
+      var deliv = null;
+      for(var i=0;i<delivRows.length;i++){if(String(delivRows[i].id)===String(req.delivId)){deliv=delivRows[i];break;}}
+      if(!deliv) throw new Error('Сдача не найдена');
+      var origQty = Number(deliv.qty||0);
+      var returnQty = Number(req.returnQty||0);
+      if(returnQty<=0||returnQty>origQty) throw new Error('Некорректное количество: '+returnQty);
+      var batchRows = getRows('_batches');
+      var batch = null;
+      for(var j=0;j<batchRows.length;j++){if(String(batchRows[j].id)===String(req.batchId)){batch=batchRows[j];break;}}
+      if(!batch) throw new Error('Пачка не найдена');
+      var newQtyDelivered = Math.max(0, Number(batch.qty_delivered||0) - returnQty);
+      if(returnQty===origQty){
+        delRow('_deliveries', req.delivId);
+      } else {
+        var newQty = origQty - returnQty;
+        var newTotal = Math.round(Number(deliv.total||0) * newQty / origQty);
+        updRow('_deliveries', req.delivId, {qty: newQty, total: newTotal});
+      }
+      var batchUpdates = {qty_delivered: newQtyDelivered};
+      if(req.isDefect){
+        // Write off defective items from batch total so tailor doesn't redo them
+        var newQtyTotal = Math.max(newQtyDelivered, Number(batch.qty_total||0) - returnQty);
+        batchUpdates.qty_total = newQtyTotal;
+      }
+      updRow('_batches', req.batchId, batchUpdates);
+      return {ok:true, newQtyDelivered:newQtyDelivered};
+    });
     case 'addDayLog':      return withLock(()=>addRow('_day_logs',    req.row));
     case 'delDayLog':      return withLock(()=>delRow('_day_logs',    req.id));
     case 'addPayment':     return withLock(()=>addRow('_payments',    req.row));
