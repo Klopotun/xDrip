@@ -864,7 +864,7 @@ function loadTodayChart(){
   const _d=todayLocal();
   google.script.run.withSuccessHandler(r=>{
     if(r&&r.ok) drawChart(r);
-  }).withFailureHandler(()=>{}).getSummary(_d, new Date().getTimezoneOffset());
+  }).withFailureHandler(()=>{}).getSummary(_d);
 }
 function checkPending(){
   google.script.run.withSuccessHandler(r=>{
@@ -1353,7 +1353,7 @@ function loadJournal(){
       document.getElementById('j-loading').style.display='none';
       showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
     })
-    .getSummary(S.journDate, new Date().getTimezoneOffset());
+    .getSummary(S.journDate);
 }
 const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){
