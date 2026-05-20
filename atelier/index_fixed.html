@@ -662,12 +662,14 @@ function buildTailor(){
 }
 function renderRecordBanner(u){
   const el=document.getElementById('tailor_record');
-  if(!el){return;}
+  if(!el)return;
   const rec=getPersonalRecord(u.id);
   if(!rec){el.innerHTML='';return;}
 
   if(rec.isRecord){
-    // Currently beating personal best this week!
+    // Don't re-render if already showing record banner — avoids animation flicker
+    if(el.dataset.state==='record')return;
+    el.dataset.state='record';
     el.innerHTML=`<div style="padding:12px 16px 0">
       <div class="record-banner">
         <div style="font-size:28px">🏆</div>
@@ -678,11 +680,14 @@ function renderRecordBanner(u){
       </div>
     </div>`;
   } else if(rec.lastQty>0){
-    // Show last week vs personal best as motivation
     const gap=rec.bestQty-rec.curQty;
     const pct=rec.bestQty>0?Math.round(rec.curQty/rec.bestQty*100):0;
+    const key=`progress:${rec.curQty}:${pct}`;
+    // Skip re-render if progress bar hasn't changed
+    if(el.dataset.state===key)return;
+    el.dataset.state=key;
     el.innerHTML=`<div style="padding:12px 16px 0">
-      <div style="background:var(--s1);border-radius:14px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      <div style="background:var(--s1);border-radius:20px;padding:12px 14px;box-shadow:0 2px 8px var(--sh2),0 6px 20px var(--sh);border:1px solid rgba(220,225,248,.5)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
           <div style="font-size:13px;font-weight:600">⭐ Личный рекорд</div>
           <div style="font-size:12px;color:var(--dm)">${rec.bestQty} шт · ${rec.bestWeek}</div>
