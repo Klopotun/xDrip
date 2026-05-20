@@ -303,6 +303,42 @@ select.inp {
 /* ── Hint text ───────────────────────────────────────────────────────── */
 .hint { text-align:center; font-size:12px; color:var(--muted); margin-top:8px; }
 
+/* ── Calendar date picker button ─────────────────────────────────────── */
+.dn-cal-btn {
+  width:34px; height:34px; border-radius:50%; border:none; cursor:pointer; font-size:15px;
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  transition: box-shadow .13s;
+}
+.dn-cal-btn:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
+
+/* ── 30-day report button ────────────────────────────────────────────── */
+.report-nav-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; margin-top:12px; padding:14px;
+  border:none; border-radius:18px; cursor:pointer; font-size:14px; font-weight:600; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  transition: box-shadow .15s;
+}
+.report-nav-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+
+/* ── 30-day report screen ────────────────────────────────────────────── */
+.report-day-card {
+  background:var(--bg); border-radius:18px; padding:14px 18px; margin-bottom:10px;
+  box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  transition: box-shadow .13s, transform .12s;
+}
+.report-day-card[data-clickable]:active {
+  box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.98);
+}
+.rdc-date  { font-size:13px; font-weight:700; color:var(--text); margin-bottom:10px; }
+.rdc-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.rdc-stat  { text-align:center; }
+.rdc-val   { font-size:22px; font-weight:800; }
+.rdc-lbl   { font-size:10px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+.rdc-empty { opacity:.35; }
+canvas#report-chart { width:100%; border-radius:12px; display:block; }
+
 /* ── Needle reminder banner ──────────────────────────────────────────── */
 .banner-needle {
   background:#FEE2E2; border:1.5px solid #FCA5A5; color:#991B1B;
@@ -344,7 +380,7 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
         <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>Всасывание</div>
       </div>
     </div>
-    <canvas id="main-chart" height="100"></canvas>
+    <canvas id="main-chart" height="120"></canvas>
   </div>
 
   <div class="reminder" id="reminder" onclick="onReminderClick()">
@@ -567,7 +603,13 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
 
   <div class="date-nav">
     <button class="dn-btn" onclick="navDate(-1)">‹</button>
-    <div class="dn-label" id="dn-label"></div>
+    <div style="display:flex;align-items:center;gap:8px;position:relative">
+      <div class="dn-label" id="dn-label"></div>
+      <button class="dn-cal-btn" onclick="openDatePicker()" title="Выбрать дату">📅</button>
+      <input type="date" id="journal-date-picker"
+             style="position:absolute;opacity:0;width:0;height:0;pointer-events:none"
+             onchange="onDatePick(this.value)">
+    </div>
     <button class="dn-btn" onclick="navDate(1)">›</button>
   </div>
 
@@ -580,6 +622,24 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
   <div id="j-loading" class="loading"><div class="spinner"></div>Загрузка…</div>
   <div id="j-content" style="display:none"><div id="tl"></div></div>
   <div id="j-empty" class="empty" style="display:none"><div class="empty-ico">📋</div>За этот день нет записей</div>
+
+  <button class="report-nav-btn" onclick="go('s-report')">📈 Статистика за 30 дней</button>
+</div>
+
+<!-- ══════════════════════════════════ REPORT ════════════════════════════════ -->
+<div class="screen" id="s-report">
+  <div class="hdr">
+    <button class="back" onclick="go('s-journal')">←</button>
+    <h1>30 дней</h1>
+  </div>
+
+  <div class="card chart-card">
+    <div class="card-lbl">Средний сахар по дням</div>
+    <canvas id="report-chart" height="80"></canvas>
+  </div>
+
+  <div id="report-loading" class="loading" style="display:none"><div class="spinner"></div>Загрузка…</div>
+  <div id="report-list"></div>
 </div>
 
 <!-- ══════════════════════════════════ EDIT ════════════════════════════════════ -->
@@ -671,6 +731,7 @@ function go(id) {
   if (id === 's-food')    initFood();
   if (id === 's-sug')     initSug();
   if (id === 's-journal') initJournal();
+  if (id === 's-report')  initReport();
 }
 
 /* ═══════════ MAIN ═════════════════════════════════════════════════════ */
@@ -888,6 +949,21 @@ function navDate(delta) {
   }, 180);
 }
 
+/* ═══════════ CALENDAR DATE PICKER ════════════════════════════════════ */
+function openDatePicker() {
+  const inp = document.getElementById('journal-date-picker');
+  inp.value = S.journDate;
+  inp.style.pointerEvents = 'auto';
+  try { inp.showPicker(); } catch(e) { inp.click(); }
+  inp.style.pointerEvents = 'none';
+}
+function onDatePick(val) {
+  if (!val) return;
+  S.journDate = val;
+  renderDateLabel();
+  loadJournal();
+}
+
 // Swipe navigation on the journal screen
 (function() {
   let _sx = 0, _sy = 0;
@@ -1037,6 +1113,186 @@ function confirmDelete() {
   .deleteRecord(S.editType==='ins' ? 'insulin' : S.editType, S.editId);
 }
 
+/* ═══════════ 30-DAY REPORT ════════════════════════════════════════════ */
+function initReport() {
+  document.getElementById('report-loading').style.display = 'block';
+  document.getElementById('report-list').innerHTML = '';
+  drawReport30Chart([]);
+
+  const today    = new Date();
+  const endDate  = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+  const startDate= new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29, 0, 0, 0, 0);
+
+  google.script.run
+    .withSuccessHandler(r => {
+      document.getElementById('report-loading').style.display = 'none';
+      if (!r || !r.ok) {
+        document.getElementById('report-list').innerHTML =
+          '<div class="empty" style="display:block"><div class="empty-ico">⚠️</div>Ошибка загрузки данных</div>';
+        return;
+      }
+      buildReport(r, startDate);
+    })
+    .withFailureHandler(() => {
+      document.getElementById('report-loading').style.display = 'none';
+      document.getElementById('report-list').innerHTML =
+        '<div class="empty" style="display:block"><div class="empty-ico">⚠️</div>Ошибка связи</div>';
+    })
+    .getSummary30(startDate.toISOString(), endDate.toISOString());
+}
+
+function buildReport(data, startDate) {
+  // Build 30 day buckets
+  const days = [];
+  for (let i = 0; i < 30; i++) {
+    const d    = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i, 0, 0, 0, 0);
+    const dEnd = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i, 23, 59, 59, 999);
+    days.push({ date: d,
+      dateStr:  d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
+      startISO: d.toISOString(), endISO: dEnd.toISOString(),
+      insulin: [], food: [], sugar: [] });
+  }
+
+  // Distribute records into buckets
+  (data.insulin||[]).forEach(x => {
+    const b = days.find(d => x.time >= d.startISO && x.time <= d.endISO);
+    if (b) b.insulin.push(x);
+  });
+  (data.food||[]).forEach(x => {
+    const b = days.find(d => x.time >= d.startISO && x.time <= d.endISO);
+    if (b) b.food.push(x);
+  });
+  (data.sugar||[]).forEach(x => {
+    const b = days.find(d => x.time >= d.startISO && x.time <= d.endISO);
+    if (b) b.sugar.push(x);
+  });
+
+  // Compute stats
+  const stats = days.map(day => {
+    const totalIns = day.insulin.reduce((s,x) => s + x.units, 0);
+    const longIns  = day.insulin.filter(x => x.insulinType === 'long').reduce((s,x) => s + x.units, 0);
+    const shortIns = totalIns - longIns;
+    const totalHE  = day.food.reduce((s,x) => s + x.he, 0);
+    const validSug = day.sugar.filter(x => x.value > 0);
+    const avgSug   = validSug.length ? validSug.reduce((s,x) => s + x.value, 0) / validSug.length : null;
+    return { ...day, totalIns, longIns, shortIns, totalHE, avgSug };
+  });
+
+  drawReport30Chart(stats);
+
+  const list     = document.getElementById('report-list');
+  const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const monNames = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+  // Newest first
+  [...stats].reverse().forEach(day => {
+    const hasData = day.insulin.length || day.food.length || day.sugar.length;
+    const card    = document.createElement('div');
+    card.className = 'report-day-card' + (hasData ? '' : ' rdc-empty');
+
+    const sugarColor = day.avgSug === null ? 'var(--muted)'
+      : day.avgSug < 3.9  ? '#DC2626'
+      : day.avgSug <= 7.8 ? '#4CAF7A'
+      : day.avgSug <= 11  ? '#D07030' : '#DC2626';
+
+    const fmt = v => v > 0 ? (v%1===0 ? String(v) : v.toFixed(1)) : '—';
+
+    const d = day.date;
+    card.innerHTML = `
+      <div class="rdc-date">${dayNames[d.getDay()]}, ${d.getDate()} ${monNames[d.getMonth()]} ${d.getFullYear()}</div>
+      <div class="rdc-stats">
+        <div class="rdc-stat">
+          <div class="rdc-val" style="color:${sugarColor}">${day.avgSug !== null ? day.avgSug.toFixed(1) : '—'}</div>
+          <div class="rdc-lbl">сахар</div>
+        </div>
+        <div class="rdc-stat">
+          <div class="rdc-val" style="color:var(--accent)">${fmt(day.totalIns)}</div>
+          <div class="rdc-lbl">инсулин</div>
+        </div>
+        <div class="rdc-stat">
+          <div class="rdc-val" style="color:var(--a-green)">${fmt(day.totalHE)}</div>
+          <div class="rdc-lbl">ХЕ</div>
+        </div>
+      </div>`;
+
+    if (hasData) {
+      card.setAttribute('data-clickable', '1');
+      card.style.cursor = 'pointer';
+      card.onclick = () => { S.journDate = day.dateStr; go('s-journal'); };
+    }
+    list.appendChild(card);
+  });
+}
+
+function drawReport30Chart(stats) {
+  const canvas = document.getElementById('report-chart');
+  if (!canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth - 28;
+  const H   = 80;
+  canvas.width  = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  if (!stats.length) return;
+
+  const PAD  = {l:22, r:4, t:4, b:14};
+  const CW   = W - PAD.l - PAD.r;
+  const CH   = H - PAD.t - PAD.b;
+  const GMIN = 2, GMAX = 14;
+  function yG(v) { return PAD.t + CH - Math.max(0, Math.min(1, (v-GMIN)/(GMAX-GMIN))) * CH; }
+
+  // Target band
+  ctx.fillStyle = 'rgba(109,201,154,.12)';
+  ctx.fillRect(PAD.l, yG(7.8), CW, yG(3.9)-yG(7.8));
+  ctx.strokeStyle='rgba(109,201,154,.3)'; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+  [3.9,7.8].forEach(v => { ctx.beginPath(); ctx.moveTo(PAD.l,yG(v)); ctx.lineTo(PAD.l+CW,yG(v)); ctx.stroke(); });
+  ctx.setLineDash([]);
+
+  const barW = CW / stats.length;
+
+  // Bars + dots
+  stats.forEach((day, i) => {
+    if (day.avgSug === null) return;
+    const x     = PAD.l + i * barW;
+    const y     = yG(day.avgSug);
+    const barH  = (PAD.t + CH) - y;
+    const color = day.avgSug < 3.9 ? '#DC2626' : day.avgSug <= 7.8 ? '#22C55E' : day.avgSug <= 11 ? '#F59E0B' : '#EF4444';
+    ctx.fillStyle = color + '55';
+    ctx.fillRect(x + 1, y, barW - 2, barH);
+    ctx.beginPath(); ctx.arc(x + barW/2, y, 2.5, 0, 2*Math.PI);
+    ctx.fillStyle = color; ctx.fill();
+  });
+
+  // Connect line
+  ctx.beginPath();
+  let first = true;
+  stats.forEach((day, i) => {
+    if (day.avgSug === null) { first = true; return; }
+    const x = PAD.l + i * barW + barW/2, y = yG(day.avgSug);
+    first ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    first = false;
+  });
+  ctx.strokeStyle = 'rgba(245,167,122,.85)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Y labels
+  ctx.fillStyle = '#8E9BB8'; ctx.font = '9px -apple-system,sans-serif';
+  ctx.textAlign = 'right';
+  [4, 7, 10].forEach(v => ctx.fillText(v, PAD.l-3, yG(v)+3));
+
+  // X labels — every 5 days + last day
+  ctx.textAlign = 'center';
+  stats.forEach((day, i) => {
+    if (i % 5 !== 0 && i !== stats.length - 1) return;
+    const d = day.date;
+    ctx.fillText(d.getDate()+'.'+pad(d.getMonth()+1), PAD.l + i*barW + barW/2, H-3);
+  });
+}
+
 /* ═══════════ INSULIN PHARMACOKINETICS ════════════════════════════════ */
 
 function interpolatePK(profile, t_h) {
@@ -1088,7 +1344,7 @@ function drawChart(data) {
 
   const dpr = window.devicePixelRatio || 1;
   const W   = canvas.parentElement.clientWidth - 28;
-  const H   = 100;
+  const H   = 120;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';

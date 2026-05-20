@@ -321,6 +321,57 @@ function deleteRecord(type, id) {
   }
 }
 
+// ── API: 30-day summary (raw records, client aggregates per day) ─────────────
+
+function getSummary30(startISO, endISO) {
+  try {
+    if (!startISO || !endISO) return { ok: false, error: 'Не переданы startISO / endISO' };
+
+    function normalizeTime(value) {
+      if (!value) return '';
+      if (value instanceof Date) return value.toISOString();
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) return d.toISOString();
+      return String(value);
+    }
+    function inRange(iso) { return iso && iso >= startISO && iso <= endISO; }
+
+    const result = { ok: true, insulin: [], food: [], sugar: [] };
+
+    let rows = getSheet('Инсулин').getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0]) continue;
+      const iso = normalizeTime(r[1]);
+      if (!inRange(iso)) continue;
+      result.insulin.push({ time: iso, insulinType: String(r[2] || ''), units: Number(r[4]) || 0 });
+    }
+
+    rows = getSheet('Еда').getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0]) continue;
+      const iso = normalizeTime(r[1]);
+      if (!inRange(iso)) continue;
+      result.food.push({ time: iso, he: Number(r[2]) || 0 });
+    }
+
+    rows = getSheet('Сахар').getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r[0]) continue;
+      const iso = normalizeTime(r[1]);
+      if (!inRange(iso)) continue;
+      const value = Number(r[2]);
+      if (!isNaN(value)) result.sugar.push({ time: iso, value });
+    }
+
+    return result;
+  } catch(e) {
+    return { ok: false, error: e && e.stack ? e.stack : String(e) };
+  }
+}
+
 // ── API: Pending after-meal sugar reminders ──────────────────────────────────
 
 function getPendingSugars() {
