@@ -1272,8 +1272,38 @@ function navDate(delta){
   const p=S.journDate.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
   d.setDate(d.getDate()+delta);
   S.journDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-  renderDateLabel(); loadJournal();
+
+  // Brief slide animation: content slides out, then reloads
+  const content=document.getElementById('j-content');
+  const empty=document.getElementById('j-empty');
+  [content,empty].forEach(el=>{
+    el.style.transition='transform .18s ease, opacity .18s ease';
+    el.style.transform='translateX('+(delta<0?'60px':'-60px')+')';
+    el.style.opacity='0';
+  });
+  setTimeout(()=>{
+    [content,empty].forEach(el=>{
+      el.style.transition='none'; el.style.transform=''; el.style.opacity='';
+    });
+    renderDateLabel(); loadJournal();
+  }, 180);
 }
+
+// ── Swipe navigation on the journal screen ───────────────────────────────────
+(function(){
+  let _sx=0, _sy=0;
+  const scr=document.getElementById('s-journal');
+  scr.addEventListener('touchstart',e=>{
+    _sx=e.touches[0].clientX; _sy=e.touches[0].clientY;
+  },{passive:true});
+  scr.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-_sx;
+    const dy=e.changedTouches[0].clientY-_sy;
+    if(Math.abs(dx)>Math.abs(dy)*1.5 && Math.abs(dx)>50){
+      navDate(dx<0?1:-1); // swipe left = next day, swipe right = prev day
+    }
+  },{passive:true});
+})();
 function showJEmpty(msg){
   const el=document.getElementById('j-empty');
   el.innerHTML=(msg?'<div style="color:var(--a-red);font-size:13px;margin-bottom:8px">⚠️ '+msg+'</div>':'')
