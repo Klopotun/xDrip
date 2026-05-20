@@ -68,11 +68,17 @@ function getLastInsulinInfo() {
       lastLongDose:  getSetting('lastLongDose')  || 0,
       lastShortDose: getSetting('lastShortDose') || 0,
       lastLongName:  getSetting('lastLongName')  || 'Базальный',
-      lastShortName: getSetting('lastShortName') || 'Болюс'
+      lastShortName: getSetting('lastShortName') || 'Болюс',
+      needleCount:   getSetting('needleCount')   || 0
     };
   } catch(e) {
-    return { lastSite: '', lastLongDose: 0, lastShortDose: 0, lastLongName: 'Базальный', lastShortName: 'Болюс' };
+    return { lastSite: '', lastLongDose: 0, lastShortDose: 0, lastLongName: 'Базальный', lastShortName: 'Болюс', needleCount: 0 };
   }
+}
+
+function resetNeedle() {
+  try { setSetting('needleCount', 0); return { ok: true }; }
+  catch(e) { return { ok: false, error: e.message }; }
 }
 
 // ── API: Save insulin ────────────────────────────────────────────────────────
@@ -91,6 +97,7 @@ function saveInsulin(data) {
     ]);
 
     setSetting('lastSite', data.site);
+    setSetting('needleCount', (parseInt(getSetting('needleCount')) || 0) + 1);
     if (data.insulinType === 'long') {
       setSetting('lastLongDose', Number(data.units));
       setSetting('lastLongName', data.insulinName);

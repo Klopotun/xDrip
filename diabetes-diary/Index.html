@@ -400,6 +400,40 @@ select.inp {
 
 /* ── Hint text ───────────────────────────────────────────────────────── */
 .hint { text-align:center; font-size:12px; color:var(--muted); margin-top:8px; }
+
+/* ── Last-site = RED (was orange) ────────────────────────────────────── */
+.site-btn.last { color:#DC2626; border-color:transparent; background:var(--bg);
+  box-shadow: 4px 4px 10px rgba(220,38,38,.25), -4px -4px 10px var(--sl); }
+.site-btn.last::after { content:' 🔴'; font-size:9px; }
+
+/* ── Needle reminder banner ──────────────────────────────────────────── */
+.banner-needle {
+  background:#FEE2E2; border:1.5px solid #FCA5A5; color:#991B1B;
+  border-radius:16px; padding:14px 18px; margin-bottom:12px; font-size:13px; font-weight:500;
+}
+.needle-reset-btn {
+  margin-top:10px; background:#DC2626; color:#fff; border:none;
+  border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;
+}
+
+/* ── Drum ± buttons ──────────────────────────────────────────────────── */
+.drum-adj-row { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; }
+.drum-adj-btn {
+  width:44px; height:44px; border-radius:14px; border:none; cursor:pointer;
+  font-size:22px; font-weight:300; color:var(--accent); display:flex; align-items:center; justify-content:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: box-shadow .13s, transform .12s;
+}
+.drum-adj-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.92); }
+.drum-adj-lbl { font-size:12px; color:var(--muted); font-weight:500; }
+
+/* ── Main chart ──────────────────────────────────────────────────────── */
+.chart-card { padding:16px 14px 12px; }
+.chart-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.chart-legend { display:flex; gap:14px; flex-wrap:wrap; }
+.leg { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); font-weight:500; }
+.leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+canvas#main-chart { width:100%; border-radius:12px; display:block; }
 </style>
 </head>
 <body>
@@ -412,6 +446,23 @@ select.inp {
     <div class="hero-greeting">Добрый день</div>
     <h1>Дневник диабетика</h1>
     <div class="hero-time" id="main-time"></div>
+  </div>
+
+  <!-- Day chart -->
+  <div class="card chart-card" id="chart-card">
+    <div class="chart-title-row">
+      <div class="card-lbl" style="margin-bottom:0">Сегодня</div>
+      <div class="chart-legend">
+        <div class="leg"><div class="leg-dot" style="background:#F08888"></div>Сахар</div>
+        <div class="leg"><div class="leg-dot" style="background:#7B8FFF"></div>Апидра</div>
+        <div class="leg"><div class="leg-dot" style="background:#A78BFA"></div>Левемир</div>
+        <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>ХЕ</div>
+      </div>
+    </div>
+    <canvas id="main-chart" height="190"></canvas>
+    <div id="chart-empty" style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0;display:none">
+      Нет данных — добавьте сахар, укол или приём пищи
+    </div>
   </div>
 
   <div class="reminder" id="reminder" onclick="onReminderClick()">
@@ -479,6 +530,14 @@ select.inp {
     </div>
   </div>
 
+  <!-- Needle reminder -->
+  <div class="banner-needle" id="needle-banner" style="display:none">
+    <strong>💉 Рекомендуется сменить иглу</strong><br>
+    Сделано <span id="needle-count">0</span> уколов с последней смены.
+    Частое использование одной иглы вызывает боль и уплотнения.
+    <br><button class="needle-reset-btn" onclick="resetNeedle()">✓ Иглу сменил(а)</button>
+  </div>
+
   <div class="banner banner-sug" id="ins-suggestion">
     <div id="ins-sug-text">Прошлый раз: <strong id="sug-last-val">—</strong> ед. Повторить?</div>
     <button class="sug-use" onclick="useSuggestedDose()">Использовать →</button>
@@ -493,6 +552,11 @@ select.inp {
       <ul class="drum-list" id="drum-list"></ul>
     </div>
     <div class="drum-caption">Выбрано: <strong id="drum-val">1</strong> единиц</div>
+    <div class="drum-adj-row">
+      <button class="drum-adj-btn" onclick="adjDrum(-1)">−</button>
+      <span class="drum-adj-lbl">точная настройка</span>
+      <button class="drum-adj-btn" onclick="adjDrum(1)">+</button>
+    </div>
   </div>
 
   <div class="banner banner-warn" id="site-warn">
@@ -727,7 +791,11 @@ function fmtInput(d) {
   return u.toISOString().slice(0,16);
 }
 function inputToUTC(val) {
-  return new Date(new Date(val+':00').getTime()-3*3600000).toISOString();
+  // val = "YYYY-MM-DDTHH:mm" shown as UTC+3 → convert to UTC
+  // Parsing manually avoids browser timezone ambiguity
+  const m = val.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return new Date().toISOString();
+  return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4]-3, +m[5])).toISOString();
 }
 function getSubmitTime(id) {
   const i=document.getElementById(id+'-tinp');
@@ -786,6 +854,13 @@ function initMain(){
     days[n.getUTCDay()]+', '+n.getUTCDate()+' '+mons[n.getUTCMonth()]+
     ' · '+pad(n.getUTCHours())+':'+pad(n.getUTCMinutes())+' МСК';
   checkPending();
+  loadTodayChart();
+}
+
+function loadTodayChart(){
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok) drawChart(r);
+  }).withFailureHandler(()=>{}).getSummary(todayUTC3());
 }
 function checkPending(){
   google.script.run.withSuccessHandler(r=>{
@@ -851,14 +926,32 @@ function initIns(){
   document.getElementById('ins-tinp').style.display='none';
   document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('sel','last'));
   document.getElementById('site-warn').classList.remove('visible');
+  document.getElementById('needle-banner').style.display='none';
   refreshTimeDisplays();
   google.script.run.withSuccessHandler(info=>{
     S.lastSite=info.lastSite; S.lastLong=parseInt(info.lastLongDose)||0;
     S.lastShort=parseInt(info.lastShortDose)||0;
     S.lastLongN=info.lastLongName||'Базальный'; S.lastShortN=info.lastShortName||'Болюс';
+    S.needleCount=parseInt(info.needleCount)||0;
+    // Mark last site in red
     if(S.lastSite){ const el=document.getElementById('site-'+S.lastSite); if(el)el.classList.add('last'); }
+    // Show needle reminder if ≥5 injections since last change
+    if(S.needleCount>=5){
+      document.getElementById('needle-count').textContent=S.needleCount;
+      document.getElementById('needle-banner').style.display='block';
+    }
     selInsType('short');
   }).withFailureHandler(()=>selInsType('short')).getLastInsulinInfo();
+}
+
+function adjDrum(d){ S.drumIdx=clamp(S.drumIdx+d); renderDrum(false); }
+
+function resetNeedle(){
+  google.script.run.withSuccessHandler(()=>{
+    document.getElementById('needle-banner').style.display='none';
+    S.needleCount=0;
+    toast('✅ Счётчик иглы сброшен');
+  }).withFailureHandler(()=>toast('❌ Ошибка')).resetNeedle();
 }
 function selInsType(t){
   S.insType=t;
@@ -1270,6 +1363,183 @@ function confirmDelete(){
     else toast('❌ '+r.error);
   }).withFailureHandler(()=>toast('❌ Ошибка удаления'))
   .deleteRecord(S.editType==='ins'?'insulin':S.editType,S.editId);
+}
+
+/* ═══════════ INSULIN PHARMACOKINETICS ════════════════════════════════ */
+
+// Piece-wise linear interpolation of drug activity profile
+function interpolatePK(profile, t_h) {
+  if (t_h <= 0) return 0;
+  for (let i = 0; i < profile.length - 1; i++) {
+    if (t_h >= profile[i][0] && t_h <= profile[i+1][0]) {
+      const f = (t_h - profile[i][0]) / (profile[i+1][0] - profile[i][0]);
+      return profile[i][1] + f * (profile[i+1][1] - profile[i][1]);
+    }
+  }
+  return 0;
+}
+
+// Apidra (glulisine) profile — onset 10-20 min, peak 60-90 min, 4h duration
+// onsetMin: 10 for abdomen, 15 for arm/buttock
+function apidraActivity(t_h, dose, isAbdomen) {
+  const onset = (isAbdomen ? 10 : 15) / 60;
+  const t = t_h - onset;
+  if (t <= 0 || t_h > 4.5) return 0;
+  const PK = [[0,0],[0.25,0.4],[0.5,0.75],[0.75,1.0],[1.0,0.9],[1.5,0.65],[2.0,0.4],[3.0,0.15],[4.0,0.03],[4.5,0]];
+  return dose * interpolatePK(PK, t);
+}
+
+// Levemir (detemir) profile — onset 1-2h, flat peak 6-8h, duration 16-24h
+function levemirActivity(t_h, dose) {
+  if (t_h > 24) return 0;
+  const PK = [[0,0],[1,0.05],[2,0.2],[4,0.55],[6,0.8],[8,0.92],[10,0.9],[12,0.82],[16,0.6],[20,0.3],[22,0.12],[24,0]];
+  return dose * interpolatePK(PK, t_h);
+}
+
+/* ═══════════ MAIN CHART ═══════════════════════════════════════════════ */
+
+function drawChart(data) {
+  const canvas = document.getElementById('main-chart');
+  if (!canvas) return;
+  const hasData = (data.sugar&&data.sugar.length)||(data.insulin&&data.insulin.length)||(data.food&&data.food.length);
+  document.getElementById('chart-empty').style.display = hasData ? 'none' : 'block';
+
+  const dpr   = window.devicePixelRatio || 1;
+  const W     = canvas.parentElement.clientWidth - 28; // card padding
+  const H     = 190;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  // Layout
+  const PAD = {l:30, r:8, t:8, b:22};
+  const GH  = 118; // glucose panel height
+  const AH  = 32;  // activity panel height
+  const GT  = PAD.t;           // glucose top
+  const AT  = GT + GH + 6;     // activity top
+
+  const CW = W - PAD.l - PAD.r;
+
+  // Day boundaries in UTC (UTC+3 day = UTC day offset by -3h)
+  const today   = todayUTC3();
+  const [yr,mo,dy] = today.split('-').map(Number);
+  const dayStartMs  = Date.UTC(yr, mo-1, dy) - 3*3600000;
+  const dayMs = 24*3600000;
+
+  function xOf(ms) { return PAD.l + Math.max(0, Math.min(1,(ms-dayStartMs)/dayMs)) * CW; }
+  function xOfH(h) { return PAD.l + (h/24)*CW; }
+
+  // ── Time grid ─────────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(163,175,200,.18)';
+  ctx.lineWidth = 1;
+  [0,6,12,18,24].forEach(h => {
+    const x = xOfH(h);
+    ctx.beginPath(); ctx.moveTo(x, GT); ctx.lineTo(x, AT+AH); ctx.stroke();
+  });
+
+  // ── Glucose target band (3.9 – 7.8 mmol/L) ───────────────────────────
+  const GMIN=2, GMAX=18;
+  function yGluc(v) { return GT + GH - ((v-GMIN)/(GMAX-GMIN))*GH; }
+  ctx.fillStyle = 'rgba(109,201,154,.13)';
+  ctx.fillRect(PAD.l, yGluc(7.8), CW, yGluc(3.9)-yGluc(7.8));
+  // Target lines
+  ctx.strokeStyle='rgba(109,201,154,.4)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  [3.9,7.8].forEach(v=>{ ctx.beginPath(); ctx.moveTo(PAD.l,yGluc(v)); ctx.lineTo(PAD.l+CW,yGluc(v)); ctx.stroke(); });
+  ctx.setLineDash([]);
+
+  // ── Compute drug activity at 15-min steps ─────────────────────────────
+  const STEPS = 97; // 0..24h every 15 min
+  const iobA  = new Float32Array(STEPS); // Apidra
+  const iobL  = new Float32Array(STEPS); // Levemir
+
+  (data.insulin||[]).forEach(inj => {
+    const injMs   = new Date(inj.time).getTime();
+    const dose    = parseFloat(inj.units)||0;
+    const isLong  = inj.insulinType === 'long';
+    const isAbdomen = ['sr','sl'].includes(inj.site);
+    for (let s=0; s<STEPS; s++) {
+      const t_h = ((dayStartMs + s*15*60000) - injMs) / 3600000;
+      if (t_h < 0) continue;
+      if (isLong) iobL[s] += levemirActivity(t_h, dose);
+      else        iobA[s] += apidraActivity(t_h, dose, isAbdomen);
+    }
+  });
+
+  // ── Draw Levemir area (purple) ─────────────────────────────────────────
+  const maxL = Math.max(...iobL, 0.1);
+  function drawArea(iob, maxV, color) {
+    if (maxV < 0.01) return;
+    ctx.beginPath();
+    ctx.moveTo(xOfH(0), AT+AH);
+    for (let s=0; s<STEPS; s++) {
+      ctx.lineTo(xOfH(s*15/60), AT+AH - (iob[s]/maxV)*AH);
+    }
+    ctx.lineTo(xOfH(24), AT+AH); ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+  }
+  const maxA = Math.max(...iobA, 0.1);
+  drawArea(iobL, Math.max(maxA,maxL), 'rgba(167,139,250,.30)');
+  drawArea(iobA, Math.max(maxA,maxL), 'rgba(123,143,255,.40)');
+
+  // ── HE bars ───────────────────────────────────────────────────────────
+  (data.food||[]).forEach(meal => {
+    const x = xOf(new Date(meal.time).getTime());
+    const he = parseFloat(meal.he)||0;
+    const barH = Math.min((he/6)*AH, AH);
+    ctx.fillStyle = 'rgba(109,201,154,.75)';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x-4, AT+AH-barH, 8, barH, 3) : ctx.fillRect(x-4, AT+AH-barH, 8, barH);
+    ctx.fill();
+  });
+
+  // ── Glucose line + dots ───────────────────────────────────────────────
+  const sugarSorted = [...(data.sugar||[])].sort((a,b)=>new Date(a.time)-new Date(b.time));
+  if (sugarSorted.length > 1) {
+    ctx.beginPath();
+    sugarSorted.forEach((s,i) => {
+      const x=xOf(new Date(s.time).getTime()), y=yGluc(parseFloat(s.value));
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle='rgba(240,136,136,.75)'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+  sugarSorted.forEach(s => {
+    const v=parseFloat(s.value);
+    const x=xOf(new Date(s.time).getTime()), y=yGluc(v);
+    ctx.beginPath(); ctx.arc(x,y,5,0,2*Math.PI);
+    ctx.fillStyle = v<3.9?'#DC2626': v<=7.8?'#22C55E': v<=11?'#F59E0B':'#EF4444';
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5; ctx.stroke();
+    // Value label
+    if(sugarSorted.length<=8){
+      ctx.fillStyle='#4A5370'; ctx.font=`bold ${10*dpr/dpr}px -apple-system,sans-serif`;
+      ctx.textAlign='center'; ctx.fillText(v.toFixed(1), x, y-(v>GMAX-2?10:-7));
+    }
+  });
+
+  // ── X-axis time labels ────────────────────────────────────────────────
+  ctx.fillStyle='#8E9BB8'; ctx.font=`10px -apple-system,sans-serif`; ctx.textAlign='center';
+  [0,6,12,18,24].forEach(h=>ctx.fillText(pad(h)+':00', xOfH(h), H-5));
+
+  // ── Y-axis glucose labels ─────────────────────────────────────────────
+  ctx.textAlign='right';
+  [4,7,10,14].forEach(v=>{
+    ctx.fillStyle = v>=3.9&&v<=7.8?'#6DC99A':'rgba(142,155,184,.7)';
+    ctx.fillText(v, PAD.l-3, yGluc(v)+4);
+  });
+
+  // ── Current time line ─────────────────────────────────────────────────
+  const nowMs = Date.now();
+  if(nowMs>=dayStartMs && nowMs<=dayStartMs+dayMs){
+    const xNow=xOf(nowMs);
+    ctx.strokeStyle='rgba(123,143,255,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(xNow, GT); ctx.lineTo(xNow, AT+AH); ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
 /* ═══════════ INIT ═════════════════════════════════════════════════════ */
