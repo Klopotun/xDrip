@@ -798,14 +798,7 @@ function inputToUTC(val) {
   const d = new Date(val);
   return isNaN(d) ? new Date().toISOString() : d.toISOString();
 }
-// Return UTC start/end ms for a local day string "YYYY-MM-DD"
-function getDayBounds(localDateStr) {
-  const [yr,mo,dy] = localDateStr.split('-').map(Number);
-  return {
-    start: new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime(),
-    end:   new Date(yr, mo-1, dy, 23, 59, 59, 999).getTime()
-  };
-}
+
 function getSubmitTime(id) {
   const i=document.getElementById(id+'-tinp');
   if(i && i.style.display!=='none' && i.value) return inputToUTC(i.value);
@@ -868,10 +861,10 @@ function initMain(){
 
 function loadTodayChart(){
   drawChart({insulin:[],food:[],sugar:[]});
-  const _d=todayLocal(), _b=getDayBounds(_d);
+  const _d=todayLocal();
   google.script.run.withSuccessHandler(r=>{
-    if(r.ok) drawChart(r);
-  }).withFailureHandler(()=>{}).getSummary(_d, _b.start, _b.end);
+    if(r&&r.ok) drawChart(r);
+  }).withFailureHandler(()=>{}).getSummary(_d, new Date().getTimezoneOffset());
 }
 function checkPending(){
   google.script.run.withSuccessHandler(r=>{
@@ -1092,10 +1085,27 @@ function renderSearchResults(results, query, fromOnline){
     onlineBtn.textContent='🌐 Искать онлайн (Open Food Facts)';
     onlineBtn.onclick=()=>{
       onlineBtn.textContent='Ищем…'; onlineBtn.disabled=true;
-      google.script.run.withSuccessHandler(r=>{
-        if(r&&r.ok) renderSearchResults(r.results, query, true);
-        else toast('❌ Ошибка онлайн-поиска');
-      }).withFailureHandler(()=>toast('❌ Ошибка')).searchFoodsOnline(query);
+      const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+
+        encodeURIComponent(query)+
+        '&search_simple=1&action=process&json=1&page_size=8'+
+        '&fields=product_name,product_name_ru,nutriments&lc=ru&cc=ru';
+      fetch(url)
+        .then(res=>res.json())
+        .then(data=>{
+          if(!data.products){renderSearchResults([],query,true);return;}
+          const results=(data.products||[])
+            .filter(p=>p.nutriments&&p.nutriments['carbohydrates_100g']!=null)
+            .slice(0,8)
+            .map(p=>({
+              name: p.product_name_ru||p.product_name||'—',
+              carbs: +(p.nutriments['carbohydrates_100g']||0).toFixed(1),
+              fat:   +(p.nutriments['fat_100g']||0).toFixed(1),
+              protein: +(p.nutriments['proteins_100g']||0).toFixed(1),
+              kcal:  +(p.nutriments['energy-kcal_100g']||0).toFixed(0)
+            }));
+          renderSearchResults(results,query,true);
+        })
+        .catch(()=>{onlineBtn.textContent='🌐 Искать онлайн'; onlineBtn.disabled=false; toast('❌ Нет сети');});
     };
     box.appendChild(onlineBtn);
   }
@@ -1321,11 +1331,10 @@ function showJEmpty(msg){
 }
 function loadJournal(){
   ['j-loading','j-content','j-empty'].forEach((id,i)=>document.getElementById(id).style.display=i===0?'block':'none');
-  const _b=getDayBounds(S.journDate);
   google.script.run
     .withSuccessHandler(r=>{
       document.getElementById('j-loading').style.display='none';
-      if(!r||!r.ok){showJEmpty(r ? (r.error||'ok=false без деталей') : 'Нет ответа от сервера');return;}
+      if(!r||!r.ok){showJEmpty(r&&r.error ? r.error : 'Ошибка загрузки');return;}
       S.jData=r;
       document.getElementById('st-ins').textContent=r.totalInsulin||'0';
       document.getElementById('st-he').textContent=(r.totalHE||0)%1===0?(r.totalHE||0):(r.totalHE||0).toFixed(1);
@@ -1344,7 +1353,7 @@ function loadJournal(){
       document.getElementById('j-loading').style.display='none';
       showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
     })
-    .getSummary(S.journDate, _b.start, _b.end);
+    .getSummary(S.journDate, new Date().getTimezoneOffset());
 }
 const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){

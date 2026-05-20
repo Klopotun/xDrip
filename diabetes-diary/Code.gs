@@ -161,36 +161,39 @@ function saveSugar(data) {
   }
 }
 
-// ── Helpers for getSummary (top-level to avoid GAS V8 closure issues) ────────
+// ── Helpers for getSummary (top-level — no closures, GAS V8 safe) ────────────
 
-function _msFromCell(v) {
-  if (!v) return NaN;
-  var iso = (v instanceof Date) ? v.toISOString() : String(v);
-  return new Date(iso).getTime();
-}
-
-function _isoFromCell(v) {
+function _cellToIso(v) {
   if (!v) return '';
   return (v instanceof Date) ? v.toISOString() : String(v);
 }
 
-// ── API: Summary for a date ──────────────────────────────────────────────────
-// startMs / endMs: UTC ms boundaries of the local day, computed by the client.
+function _cellLocalDate(v, tzOff) {
+  var iso = _cellToIso(v);
+  if (!iso) return '';
+  var ms = new Date(iso).getTime();
+  if (isNaN(ms)) return '';
+  // Shift UTC→local: local = UTC − tzOffset  (tzOff=-180 for Moscow UTC+3)
+  return new Date(ms - tzOff * 60000).toISOString().slice(0, 10);
+}
 
-function getSummary(dateStr, startMs, endMs) {
+// ── API: Summary for a date ──────────────────────────────────────────────────
+// dateStr : "YYYY-MM-DD" in device local time
+// tzOff   : new Date().getTimezoneOffset() from client (-180 for Moscow UTC+3)
+
+function getSummary(dateStr, tzOff) {
   try {
-    var sMs = Number(startMs), eMs = Number(endMs);
+    tzOff = (typeof tzOff === 'number' && !isNaN(tzOff)) ? tzOff : 0;
 
     var insulin = [], food = [], sugar = [];
-    var i, r, ms;
+    var i, r;
 
     var insulinRows = getSheet('Инсулин').getDataRange().getValues();
     for (i = 1; i < insulinRows.length; i++) {
       r = insulinRows[i];
       if (!r[0]) continue;
-      ms = _msFromCell(r[1]);
-      if (isNaN(ms) || ms < sMs || ms > eMs) continue;
-      insulin.push({ id: String(r[0]), time: _isoFromCell(r[1]),
+      if (_cellLocalDate(r[1], tzOff) !== dateStr) continue;
+      insulin.push({ id: String(r[0]), time: _cellToIso(r[1]),
         insulinType: r[2], insulinName: r[3], units: r[4], site: r[5], notes: r[6] });
     }
 
@@ -198,9 +201,8 @@ function getSummary(dateStr, startMs, endMs) {
     for (i = 1; i < foodRows.length; i++) {
       r = foodRows[i];
       if (!r[0]) continue;
-      ms = _msFromCell(r[1]);
-      if (isNaN(ms) || ms < sMs || ms > eMs) continue;
-      food.push({ id: String(r[0]), time: _isoFromCell(r[1]),
+      if (_cellLocalDate(r[1], tzOff) !== dateStr) continue;
+      food.push({ id: String(r[0]), time: _cellToIso(r[1]),
         he: r[2], description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5]) });
     }
 
@@ -208,9 +210,8 @@ function getSummary(dateStr, startMs, endMs) {
     for (i = 1; i < sugarRows.length; i++) {
       r = sugarRows[i];
       if (!r[0]) continue;
-      ms = _msFromCell(r[1]);
-      if (isNaN(ms) || ms < sMs || ms > eMs) continue;
-      sugar.push({ id: String(r[0]), time: _isoFromCell(r[1]),
+      if (_cellLocalDate(r[1], tzOff) !== dateStr) continue;
+      sugar.push({ id: String(r[0]), time: _cellToIso(r[1]),
         value: r[2], sugarType: r[3], foodId: String(r[4]) });
     }
 
