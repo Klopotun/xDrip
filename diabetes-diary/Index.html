@@ -459,11 +459,9 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
         <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>ХЕ</div>
       </div>
     </div>
-    <canvas id="main-chart" height="190"></canvas>
-    <div id="chart-empty" style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0;display:none">
-      Нет данных — добавьте сахар, укол или приём пищи
-    </div>
+    <canvas id="main-chart" height="100"></canvas>
   </div>
+
 
   <div class="reminder" id="reminder" onclick="onReminderClick()">
     <div class="r-icon">⏰</div>
@@ -861,6 +859,7 @@ function initMain(){
 }
 
 function loadTodayChart(){
+  drawChart({insulin:[],food:[],sugar:[]});           // show grid + time line immediately
   google.script.run.withSuccessHandler(r=>{
     if(r.ok) drawChart(r);
   }).withFailureHandler(()=>{}).getSummary(todayLocal(), new Date().getTimezoneOffset());
@@ -1035,33 +1034,48 @@ function onFoodSearch(query){
   clearTimeout(foodSearchTimer);
   const box=document.getElementById('search-results');
   if(!query.trim()){box.innerHTML='';box.classList.remove('open');return;}
+  box.innerHTML='<div style="text-align:center;color:var(--muted);padding:10px;font-size:13px">Ищу…</div>';
+  box.classList.add('open');
   foodSearchTimer=setTimeout(()=>{
     google.script.run.withSuccessHandler(r=>{
-      if(!r.ok){toast('❌ '+r.error);return;}
+      if(!r||!r.ok){box.innerHTML='';box.classList.remove('open');return;}
       renderSearchResults(r.results, query, false);
-    }).withFailureHandler(()=>{}).searchFoods(query);
+    }).withFailureHandler(()=>{box.innerHTML='';box.classList.remove('open');}).searchFoods(query);
   }, 300);
 }
+
+// Close search results when focus leaves the search area
+document.addEventListener('click', e=>{
+  const wrap=document.getElementById('food-search-mode');
+  if(wrap && !wrap.contains(e.target)){
+    const box=document.getElementById('search-results');
+    if(box){box.innerHTML='';box.classList.remove('open');}
+  }
+});
 
 function renderSearchResults(results, query, fromOnline){
   const box=document.getElementById('search-results');
   box.innerHTML='';
   box.classList.add('open');
 
-  if(results.length===0 && fromOnline){
-    box.innerHTML='<div style="text-align:center;color:var(--muted);padding:12px;font-size:13px">Ничего не найдено</div>';
-    return;
+  if(results.length===0){
+    const msg=document.createElement('div');
+    msg.style.cssText='text-align:center;color:var(--muted);padding:10px;font-size:13px';
+    msg.textContent = fromOnline ? 'Ничего не найдено' : 'В базе не найдено';
+    box.appendChild(msg);
+    if(fromOnline) return;
+  } else {
+    results.forEach(f=>{
+      const el=document.createElement('div');
+      el.className='sr-item';
+      const he=(f.carbs/12).toFixed(1);
+      const kcal=f.kcal||Math.round(f.carbs*4+f.fat*9+f.protein*4);
+      el.innerHTML=`<div class="sr-name">${f.name}</div>
+        <div class="sr-macros">У: ${f.carbs}г · Ж: ${f.fat}г · Б: ${f.protein}г · ${kcal} ккал · <strong style="color:var(--a-green)">${he} ХЕ/100г</strong></div>`;
+      el.onclick=()=>addFood(f);
+      box.appendChild(el);
+    });
   }
-
-  results.forEach(f=>{
-    const el=document.createElement('div');
-    el.className='sr-item';
-    const he=(f.carbs/12).toFixed(1);
-    el.innerHTML=`<div class="sr-name">${f.name}</div>
-      <div class="sr-macros">У: ${f.carbs}г · Ж: ${f.fat}г · Б: ${f.protein}г · ${f.kcal||Math.round(f.carbs*4+f.fat*9+f.protein*4)} ккал · <strong style="color:var(--a-green)">${he} ХЕ/100г</strong></div>`;
-    el.onclick=()=>addFood(f);
-    box.appendChild(el);
-  });
 
   if(!fromOnline){
     const onlineBtn=document.createElement('button');
@@ -1070,7 +1084,7 @@ function renderSearchResults(results, query, fromOnline){
     onlineBtn.onclick=()=>{
       onlineBtn.textContent='Ищем…'; onlineBtn.disabled=true;
       google.script.run.withSuccessHandler(r=>{
-        if(r.ok) renderSearchResults(r.results, query, true);
+        if(r&&r.ok) renderSearchResults(r.results, query, true);
         else toast('❌ Ошибка онлайн-поиска');
       }).withFailureHandler(()=>toast('❌ Ошибка')).searchFoodsOnline(query);
     };
@@ -1412,12 +1426,10 @@ function levemirActivity(t_h, dose) {
 function drawChart(data) {
   const canvas = document.getElementById('main-chart');
   if (!canvas) return;
-  const hasData = (data.sugar&&data.sugar.length)||(data.insulin&&data.insulin.length)||(data.food&&data.food.length);
-  document.getElementById('chart-empty').style.display = hasData ? 'none' : 'block';
 
-  const dpr   = window.devicePixelRatio || 1;
-  const W     = canvas.parentElement.clientWidth - 28; // card padding
-  const H     = 190;
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth - 28;
+  const H   = 100;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
@@ -1427,26 +1439,26 @@ function drawChart(data) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
-  // Layout
-  const PAD = {l:30, r:8, t:8, b:22};
-  const GH  = 118; // glucose panel height
-  const AH  = 32;  // activity panel height
-  const GT  = PAD.t;           // glucose top
-  const AT  = GT + GH + 6;     // activity top
+  // Layout: glucose panel on top, thin IOB/HE strip below
+  const PAD = {l:26, r:6, t:5, b:17};
+  const GH  = 56;   // glucose panel height
+  const AH  = 14;   // insulin activity strip height
+  const GAP = 4;
+  const GT  = PAD.t;
+  const AT  = GT + GH + GAP;
+  const CW  = W - PAD.l - PAD.r;
 
-  const CW = W - PAD.l - PAD.r;
-
-  // Day boundaries: local midnight → UTC ms using device timezone offset
-  const today   = todayLocal();
+  // Day boundaries in device local time
+  const today = todayLocal();
   const [yr,mo,dy] = today.split('-').map(Number);
-  const dayStartMs  = new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime();
+  const dayStartMs = new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime();
   const dayMs = 24*3600000;
 
-  function xOf(ms) { return PAD.l + Math.max(0, Math.min(1,(ms-dayStartMs)/dayMs)) * CW; }
-  function xOfH(h) { return PAD.l + (h/24)*CW; }
+  function xOf(ms)  { return PAD.l + Math.max(0, Math.min(1,(ms-dayStartMs)/dayMs)) * CW; }
+  function xOfH(h)  { return PAD.l + (h/24)*CW; }
 
   // ── Time grid ─────────────────────────────────────────────────────────
-  ctx.strokeStyle = 'rgba(163,175,200,.18)';
+  ctx.strokeStyle = 'rgba(163,175,200,.16)';
   ctx.lineWidth = 1;
   [0,6,12,18,24].forEach(h => {
     const x = xOfH(h);
@@ -1456,22 +1468,21 @@ function drawChart(data) {
   // ── Glucose target band (3.9 – 7.8 mmol/L) ───────────────────────────
   const GMIN=2, GMAX=18;
   function yGluc(v) { return GT + GH - ((v-GMIN)/(GMAX-GMIN))*GH; }
-  ctx.fillStyle = 'rgba(109,201,154,.13)';
+  ctx.fillStyle = 'rgba(109,201,154,.12)';
   ctx.fillRect(PAD.l, yGluc(7.8), CW, yGluc(3.9)-yGluc(7.8));
-  // Target lines
-  ctx.strokeStyle='rgba(109,201,154,.4)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  ctx.strokeStyle='rgba(109,201,154,.35)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
   [3.9,7.8].forEach(v=>{ ctx.beginPath(); ctx.moveTo(PAD.l,yGluc(v)); ctx.lineTo(PAD.l+CW,yGluc(v)); ctx.stroke(); });
   ctx.setLineDash([]);
 
   // ── Compute drug activity at 15-min steps ─────────────────────────────
   const STEPS = 97; // 0..24h every 15 min
-  const iobA  = new Float32Array(STEPS); // Apidra
-  const iobL  = new Float32Array(STEPS); // Levemir
+  const iobA  = new Float32Array(STEPS); // Apidra (bolus)
+  const iobL  = new Float32Array(STEPS); // Levemir (basal)
 
   (data.insulin||[]).forEach(inj => {
-    const injMs   = new Date(inj.time).getTime();
-    const dose    = parseFloat(inj.units)||0;
-    const isLong  = inj.insulinType === 'long';
+    const injMs     = new Date(inj.time).getTime();
+    const dose      = parseFloat(inj.units)||0;
+    const isLong    = inj.insulinType === 'long';
     const isAbdomen = ['sr','sl'].includes(inj.site);
     for (let s=0; s<STEPS; s++) {
       const t_h = ((dayStartMs + s*15*60000) - injMs) / 3600000;
@@ -1481,30 +1492,30 @@ function drawChart(data) {
     }
   });
 
-  // ── Draw Levemir area (purple) ─────────────────────────────────────────
-  const maxL = Math.max(...iobL, 0.1);
-  function drawArea(iob, maxV, color) {
-    if (maxV < 0.01) return;
+  // ── Draw IOB areas — fixed 20U Y-scale, expand only if exceeded ───────
+  const peakA = Math.max(...iobA, 0);
+  const peakL = Math.max(...iobL, 0);
+  const maxV  = Math.max(20, Math.ceil(peakA), Math.ceil(peakL));
+
+  function drawArea(iob, color) {
+    if (!iob.some(v => v > 0.01)) return;
     ctx.beginPath();
     ctx.moveTo(xOfH(0), AT+AH);
-    for (let s=0; s<STEPS; s++) {
-      ctx.lineTo(xOfH(s*15/60), AT+AH - (iob[s]/maxV)*AH);
-    }
+    for (let s=0; s<STEPS; s++) ctx.lineTo(xOfH(s*15/60), AT+AH - (iob[s]/maxV)*AH);
     ctx.lineTo(xOfH(24), AT+AH); ctx.closePath();
     ctx.fillStyle = color; ctx.fill();
   }
-  const maxA = Math.max(...iobA, 0.1);
-  drawArea(iobL, Math.max(maxA,maxL), 'rgba(167,139,250,.30)');
-  drawArea(iobA, Math.max(maxA,maxL), 'rgba(123,143,255,.40)');
+  drawArea(iobL, 'rgba(167,139,250,.38)');
+  drawArea(iobA, 'rgba(123,143,255,.48)');
 
   // ── HE bars ───────────────────────────────────────────────────────────
   (data.food||[]).forEach(meal => {
-    const x = xOf(new Date(meal.time).getTime());
-    const he = parseFloat(meal.he)||0;
+    const x   = xOf(new Date(meal.time).getTime());
+    const he  = parseFloat(meal.he)||0;
     const barH = Math.min((he/6)*AH, AH);
-    ctx.fillStyle = 'rgba(109,201,154,.75)';
+    ctx.fillStyle = 'rgba(109,201,154,.80)';
     ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x-4, AT+AH-barH, 8, barH, 3) : ctx.fillRect(x-4, AT+AH-barH, 8, barH);
+    ctx.roundRect ? ctx.roundRect(x-3, AT+AH-barH, 6, barH, 2) : ctx.fillRect(x-3, AT+AH-barH, 6, barH);
     ctx.fill();
   });
 
@@ -1516,40 +1527,38 @@ function drawChart(data) {
       const x=xOf(new Date(s.time).getTime()), y=yGluc(parseFloat(s.value));
       i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
     });
-    ctx.strokeStyle='rgba(240,136,136,.75)'; ctx.lineWidth=2.5; ctx.stroke();
+    ctx.strokeStyle='rgba(240,136,136,.75)'; ctx.lineWidth=2; ctx.stroke();
   }
   sugarSorted.forEach(s => {
     const v=parseFloat(s.value);
     const x=xOf(new Date(s.time).getTime()), y=yGluc(v);
-    ctx.beginPath(); ctx.arc(x,y,5,0,2*Math.PI);
+    ctx.beginPath(); ctx.arc(x,y,4,0,2*Math.PI);
     ctx.fillStyle = v<3.9?'#DC2626': v<=7.8?'#22C55E': v<=11?'#F59E0B':'#EF4444';
     ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5; ctx.stroke();
-    // Value label
     if(sugarSorted.length<=8){
-      ctx.fillStyle='#4A5370'; ctx.font=`bold ${10*dpr/dpr}px -apple-system,sans-serif`;
-      ctx.textAlign='center'; ctx.fillText(v.toFixed(1), x, y-(v>GMAX-2?10:-7));
+      ctx.fillStyle='#4A5370'; ctx.font=`9px -apple-system,sans-serif`;
+      ctx.textAlign='center'; ctx.fillText(v.toFixed(1), x, y-(v>GMAX-2?9:-6));
     }
   });
 
   // ── X-axis time labels ────────────────────────────────────────────────
-  ctx.fillStyle='#8E9BB8'; ctx.font=`10px -apple-system,sans-serif`; ctx.textAlign='center';
-  [0,6,12,18,24].forEach(h=>ctx.fillText(pad(h)+':00', xOfH(h), H-5));
+  ctx.fillStyle='#8E9BB8'; ctx.font=`9px -apple-system,sans-serif`; ctx.textAlign='center';
+  [0,6,12,18,24].forEach(h=>ctx.fillText(pad(h)+':00', xOfH(h), H-4));
 
   // ── Y-axis glucose labels ─────────────────────────────────────────────
-  ctx.textAlign='right';
+  ctx.textAlign='right'; ctx.font=`9px -apple-system,sans-serif`;
   [4,7,10,14].forEach(v=>{
-    ctx.fillStyle = v>=3.9&&v<=7.8?'#6DC99A':'rgba(142,155,184,.7)';
-    ctx.fillText(v, PAD.l-3, yGluc(v)+4);
+    ctx.fillStyle = v>=3.9&&v<=7.8?'#6DC99A':'rgba(142,155,184,.6)';
+    ctx.fillText(v, PAD.l-3, yGluc(v)+3);
   });
 
-  // ── Current time line ─────────────────────────────────────────────────
+  // ── Current time — thin solid vertical line ───────────────────────────
   const nowMs = Date.now();
   if(nowMs>=dayStartMs && nowMs<=dayStartMs+dayMs){
     const xNow=xOf(nowMs);
-    ctx.strokeStyle='rgba(123,143,255,.5)'; ctx.lineWidth=1.5; ctx.setLineDash([2,3]);
+    ctx.strokeStyle='rgba(123,143,255,.65)'; ctx.lineWidth=1; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(xNow, GT); ctx.lineTo(xNow, AT+AH); ctx.stroke();
-    ctx.setLineDash([]);
   }
 }
 
