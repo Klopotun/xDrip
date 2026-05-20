@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Дневник диабетика</title>
+<style>
+/* ── Tokens ───────────────────────────────────────────────────────────── */
+:root {
+  --bg:       #E8ECF4;
+  --sd:       rgba(163,175,200,.55);   /* shadow dark  */
+  --sl:       rgba(255,255,255,.90);   /* shadow light */
+  --accent:   #7B8FFF;
+  --a-green:  #6DC99A;
+  --a-orange: #F5A77A;
+  --a-red:    #F08888;
+  --text:     #4A5370;
+  --muted:    #8E9BB8;
+  --white:    #FFFFFF;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); overscroll-behavior: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', 'Segoe UI', Roboto, sans-serif; }
+
+/* ── Neumorphic helpers ────────────────────────────────────────────────── */
+.neu   { background:var(--bg); box-shadow: 7px 7px 18px var(--sd), -7px -7px 18px var(--sl); }
+.neu-s { background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px  -4px 10px var(--sl); }
+.neu-in{ background:var(--bg); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); }
+
+/* ── Screens ─────────────────────────────────────────────────────────── */
+.screen { display:none; min-height:100vh; padding:20px 18px 48px; animation: fadeUp .2s ease; }
+.screen.active { display:block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.hdr { display:flex; align-items:center; gap:10px; padding: 6px 0 22px; }
+.hdr h1 { font-size:18px; font-weight:700; color:var(--text); }
+.back {
+  width:40px; height:40px; border-radius:50%; border:none; cursor:pointer;
+  font-size:18px; color:var(--muted); display:flex; align-items:center; justify-content:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: box-shadow .15s, transform .12s;
+}
+.back:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.95); }
+
+/* ── Main screen ─────────────────────────────────────────────────────── */
+.hero { text-align:center; padding:28px 0 32px; }
+.hero-greeting { font-size:13px; color:var(--muted); font-weight:500; letter-spacing:.4px; text-transform:uppercase; margin-bottom:6px; }
+.hero h1 { font-size:26px; font-weight:800; color:var(--text); }
+.hero-time { font-size:14px; color:var(--muted); margin-top:4px; }
+
+/* ── Reminder ────────────────────────────────────────────────────────── */
+.reminder {
+  border-radius:22px; padding:16px 20px; margin-bottom:18px;
+  cursor:pointer; display:none;
+  background:var(--bg);
+  box-shadow: 6px 6px 16px var(--sd), -6px -6px 16px var(--sl);
+  border-left:4px solid var(--a-orange);
+}
+.reminder .r-icon { font-size:22px; margin-bottom:4px; }
+.reminder .r-title { font-weight:700; font-size:15px; color:var(--text); }
+.reminder .r-sub { font-size:13px; color:var(--muted); margin-top:3px; }
+
+/* ── Main action buttons ─────────────────────────────────────────────── */
+.main-btns { display:flex; flex-direction:column; gap:14px; }
+.main-btn {
+  display:flex; align-items:center; gap:18px; padding:20px 22px;
+  border:none; border-radius:24px; cursor:pointer; width:100%; text-align:left;
+  background:var(--bg); box-shadow: 7px 7px 18px var(--sd), -7px -7px 18px var(--sl);
+  transition: box-shadow .15s, transform .12s;
+}
+.main-btn:active { box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); transform:scale(.98); }
+.btn-icon-wrap {
+  width:52px; height:52px; border-radius:18px; display:flex; align-items:center; justify-content:center;
+  font-size:26px; flex-shrink:0;
+}
+.ic-blue   { background: linear-gradient(145deg,#9BA8FF,#6B7FEE); box-shadow:3px 3px 8px rgba(107,127,238,.35); }
+.ic-green  { background: linear-gradient(145deg,#84DAAD,#52B881); box-shadow:3px 3px 8px rgba(82,184,129,.35); }
+.ic-orange { background: linear-gradient(145deg,#F9B98A,#F08060); box-shadow:3px 3px 8px rgba(240,128,96,.35); }
+.btn-text-wrap .btn-label { font-size:16px; font-weight:700; color:var(--text); }
+.btn-text-wrap .btn-sub   { font-size:12px; color:var(--muted); margin-top:3px; }
+.btn-arrow { margin-left:auto; font-size:18px; color:var(--muted); }
+
+.journal-btn {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%; margin-top:14px; padding:16px;
+  border:none; border-radius:20px; cursor:pointer; font-size:14px; font-weight:600; color:var(--muted);
+  background:var(--bg); box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+  transition: box-shadow .15s;
+}
+.journal-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+
+/* ── Card ────────────────────────────────────────────────────────────── */
+.card {
+  background:var(--bg); border-radius:22px; padding:18px 20px; margin-bottom:14px;
+  box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+}
+.card-lbl {
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px;
+  color:var(--muted); margin-bottom:14px;
+}
+
+/* ── Type toggle ─────────────────────────────────────────────────────── */
+.type-row { display:flex; gap:10px; }
+.type-opt {
+  flex:1; padding:14px 6px; border-radius:16px; border:none; cursor:pointer;
+  text-align:center; font-size:12px; font-weight:600; line-height:1.4; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: all .2s;
+}
+.type-opt .t-ico { font-size:20px; margin-bottom:6px; display:block; }
+.type-opt.sel {
+  color:var(--white); background:var(--accent);
+  box-shadow: 4px 4px 12px rgba(123,143,255,.4), -2px -2px 8px rgba(255,255,255,.6);
+}
+.type-opt.sel-green { color:var(--white); background:var(--a-green); box-shadow: 4px 4px 12px rgba(109,201,154,.4), -2px -2px 8px rgba(255,255,255,.6); }
+.type-opt.sel-red   { color:var(--white); background:var(--a-red);   box-shadow: 4px 4px 12px rgba(240,136,136,.4), -2px -2px 8px rgba(255,255,255,.6); }
+
+/* ── Custom insulin name ─────────────────────────────────────────────── */
+.ins-name-row { display:none; margin-top:12px; }
+.ins-name-row.visible { display:block; }
+
+/* ── Banners ─────────────────────────────────────────────────────────── */
+.banner { border-radius:16px; padding:14px 18px; font-size:13px; margin-bottom:12px; display:none; font-weight:500; }
+.banner.visible { display:block; }
+.banner-warn   { background:#FFF4E8; color:#C67030; box-shadow:0 2px 8px rgba(198,112,48,.15); }
+.banner-sug    { background:#EBF7F1; color:#2E7D57; box-shadow:0 2px 8px rgba(46,125,87,.15); }
+.sug-use {
+  margin-top:10px; background:var(--a-green); color:#fff; border:none;
+  border-radius:12px; padding:8px 18px; font-size:13px; font-weight:700; cursor:pointer;
+}
+
+/* ── Drum picker ─────────────────────────────────────────────────────── */
+/* ── Units control (insulin) ─────────────────────────────────────────── */
+.units-ctrl { display:flex; align-items:center; justify-content:center; gap:20px; padding:12px 0; }
+.units-btn {
+  width:52px; height:52px; border-radius:16px; border:none; cursor:pointer;
+  font-size:28px; font-weight:300; color:var(--accent); display:flex; align-items:center; justify-content:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: box-shadow .13s, transform .12s;
+}
+.units-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.92); }
+.units-inp {
+  width:90px; text-align:center; font-size:36px; font-weight:800; color:var(--accent);
+  border:none; background:transparent; outline:none; -moz-appearance:textfield;
+}
+.units-inp::-webkit-inner-spin-button, .units-inp::-webkit-outer-spin-button { -webkit-appearance:none; }
+
+/* ── Site grid ───────────────────────────────────────────────────────── */
+.site-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.site-btn {
+  padding:14px 8px; border-radius:16px; border:none; cursor:pointer;
+  text-align:center; font-size:12px; font-weight:600; line-height:1.5; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: all .2s;
+}
+.site-btn .s-ico { font-size:20px; display:block; margin-bottom:4px; }
+.site-btn.sel  { color:var(--accent); box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+.site-btn.last { color:var(--a-orange); }
+.site-btn.last::after { content:' ⚠'; font-size:10px; }
+
+/* ── Inputs ──────────────────────────────────────────────────────────── */
+.inp {
+  width:100%; padding:14px 18px; border:none; border-radius:14px; font-size:15px;
+  outline:none; font-family:inherit; color:var(--text);
+  background:var(--bg); box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl);
+  transition: box-shadow .2s;
+}
+.inp:focus { box-shadow: inset 5px 5px 12px var(--sd), inset -5px -5px 12px var(--sl); }
+.inp-big    { font-size:26px; text-align:center; font-weight:700; }
+.inp-center { text-align:center; }
+textarea.inp { resize:none; height:74px; }
+select.inp {
+  appearance:none; cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E9BB8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 16px center; padding-right:44px;
+}
+::placeholder { color:var(--muted); }
+
+/* ── Time row ────────────────────────────────────────────────────────── */
+.time-row { display:flex; align-items:center; justify-content:space-between; }
+.time-val  { font-size:16px; font-weight:700; color:var(--text); }
+.time-toggle { font-size:13px; color:var(--accent); cursor:pointer; font-weight:600; padding:4px 8px;
+  background:var(--bg); border-radius:10px; box-shadow:3px 3px 7px var(--sd),-3px -3px 7px var(--sl); }
+
+/* ── HE counter ──────────────────────────────────────────────────────── */
+.he-ctrl { display:flex; align-items:center; justify-content:center; gap:24px; padding:8px 0; }
+.he-val  { font-size:48px; font-weight:800; color:var(--a-green); min-width:90px; text-align:center; }
+.he-btn  {
+  width:52px; height:52px; border-radius:50%; border:none; font-size:24px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-weight:300;
+  background:var(--bg); box-shadow: 5px 5px 12px var(--sd), -5px -5px 12px var(--sl);
+  transition: box-shadow .13s, transform .12s; color:var(--muted);
+}
+.he-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.92); }
+.he-presets { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; justify-content:center; }
+.he-pre {
+  background:var(--bg); color:var(--text); border:none; border-radius:12px;
+  padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer;
+  box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+  transition: box-shadow .13s;
+}
+.he-pre:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
+
+/* ── Food search ─────────────────────────────────────────────────────── */
+.food-mode-wrap { display:flex; gap:10px; margin-bottom:14px; }
+.food-mode-btn {
+  flex:1; padding:13px 8px; border-radius:16px; border:none; cursor:pointer;
+  font-size:13px; font-weight:700; color:var(--muted); text-align:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: all .2s;
+}
+.food-mode-btn.sel { color:#fff; background:var(--a-green);
+  box-shadow: 4px 4px 12px rgba(109,201,154,.4), -2px -2px 8px rgba(255,255,255,.6); }
+
+.search-row { display:flex; gap:10px; align-items:center; }
+.barcode-btn {
+  width:48px; height:48px; border-radius:14px; border:none; cursor:pointer; font-size:22px;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  transition: box-shadow .13s;
+}
+.barcode-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+
+.search-results { margin-top:10px; display:none; }
+.search-results.open { display:block; }
+.sr-item {
+  padding:11px 14px; border-radius:12px; cursor:pointer; margin-bottom:8px;
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+  transition: box-shadow .13s;
+}
+.sr-item:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
+.sr-name  { font-size:14px; font-weight:700; color:var(--text); }
+.sr-macros{ font-size:12px; color:var(--muted); margin-top:2px; }
+.sr-online-btn {
+  width:100%; padding:12px; margin-top:4px; border-radius:12px; border:none; cursor:pointer;
+  font-size:13px; font-weight:600; color:var(--accent);
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+}
+
+.selected-food {
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border-radius:14px; margin-bottom:8px;
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+}
+.sf-name { font-size:13px; font-weight:700; flex:1; color:var(--text); line-height:1.3; }
+.sf-gram { width:68px; text-align:center; padding:8px 6px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+  background:var(--bg); box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl);
+  color:var(--text); outline:none; }
+.sf-he   { font-size:13px; font-weight:800; color:var(--a-green); min-width:40px; text-align:right; }
+.sf-del  { font-size:18px; color:var(--muted); cursor:pointer; padding:4px; }
+
+.total-he-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-radius:16px; margin-top:4px;
+  background:linear-gradient(135deg,#84DAAD,#52B881);
+  box-shadow: 4px 4px 12px rgba(82,184,129,.3);
+}
+.the-label { font-size:14px; font-weight:600; color:#fff; opacity:.9; }
+.the-val   { font-size:26px; font-weight:800; color:#fff; }
+
+/* ── Barcode modal ────────────────────────────────────────────────────── */
+.modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500;
+  align-items:flex-end; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal-box {
+  background:var(--bg); border-radius:28px 28px 0 0; padding:24px 20px 40px;
+  width:100%; max-width:500px;
+  box-shadow: 0 -8px 30px rgba(0,0,0,.15);
+}
+.modal-title { font-size:17px; font-weight:700; margin-bottom:16px; text-align:center; }
+.modal-video { width:100%; border-radius:18px; aspect-ratio:4/3; object-fit:cover;
+  box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); background:#000; }
+.modal-hint  { text-align:center; font-size:13px; color:var(--muted); margin-top:12px; }
+.modal-close {
+  display:block; width:100%; margin-top:16px; padding:14px; border-radius:16px;
+  border:none; cursor:pointer; font-size:15px; font-weight:700; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+}
+.modal-manual-inp { display:flex; gap:10px; margin-top:14px; }
+.modal-manual-inp .inp { flex:1; }
+.modal-manual-inp button {
+  padding:0 18px; border-radius:14px; border:none; cursor:pointer;
+  font-size:14px; font-weight:700; color:#fff;
+  background:linear-gradient(135deg,#9BA8FF,#6B7FEE);
+  box-shadow: 4px 4px 10px rgba(107,127,238,.3);
+}
+
+/* ── Sugar input ─────────────────────────────────────────────────────── */
+.sug-big {
+  width:100%; font-size:52px; font-weight:800; text-align:center; border:none;
+  border-radius:20px; padding:20px; color:var(--text); font-family:inherit;
+  background:var(--bg); box-shadow: inset 5px 5px 14px var(--sd), inset -5px -5px 14px var(--sl);
+  outline:none; transition: box-shadow .2s;
+}
+.sug-big:focus { box-shadow: inset 6px 6px 16px var(--sd), inset -6px -6px 16px var(--sl); }
+.sug-indicator { text-align:center; margin-top:12px; font-size:14px; font-weight:700; min-height:22px; }
+
+/* ── Submit buttons ──────────────────────────────────────────────────── */
+.submit {
+  width:100%; padding:18px; border:none; border-radius:20px; color:#fff;
+  font-size:16px; font-weight:700; cursor:pointer; margin-top:8px;
+  transition: box-shadow .15s, transform .12s;
+}
+.submit:active { transform:scale(.98); }
+.submit:disabled { opacity:.55; cursor:not-allowed; }
+.sub-blue {
+  background: linear-gradient(145deg, #9BA8FF, #6B7FEE);
+  box-shadow: 6px 6px 16px rgba(107,127,238,.35), -4px -4px 10px rgba(255,255,255,.7);
+}
+.sub-green {
+  background: linear-gradient(145deg, #84DAAD, #52B881);
+  box-shadow: 6px 6px 16px rgba(82,184,129,.35), -4px -4px 10px rgba(255,255,255,.7);
+}
+.sub-red {
+  background: linear-gradient(145deg, #F9B98A, #F08060);
+  box-shadow: 6px 6px 16px rgba(240,128,96,.35), -4px -4px 10px rgba(255,255,255,.7);
+}
+
+/* ── Journal stats ───────────────────────────────────────────────────── */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat {
+  background:var(--bg); border-radius:18px; padding:14px 8px; text-align:center;
+  box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+}
+.stat-val { font-size:24px; font-weight:800; }
+.stat-lbl { font-size:11px; color:var(--muted); margin-top:3px; font-weight:500; }
+.sv-blue  { color:var(--accent); }
+.sv-green { color:var(--a-green); }
+.sv-red   { color:var(--a-red); }
+
+/* ── Date nav ────────────────────────────────────────────────────────── */
+.date-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.dn-btn {
+  width:40px; height:40px; border-radius:50%; border:none; font-size:20px; cursor:pointer; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  display:flex; align-items:center; justify-content:center;
+  transition: box-shadow .13s;
+}
+.dn-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+.dn-label { font-size:15px; font-weight:700; color:var(--text); }
+
+/* ── Timeline ────────────────────────────────────────────────────────── */
+.tl-item   { display:flex; gap:12px; margin-bottom:12px; }
+.tl-dot    { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.dot-ins   { background:linear-gradient(145deg,#9BA8FF,#6B7FEE); box-shadow:3px 3px 8px rgba(107,127,238,.35); }
+.dot-food  { background:linear-gradient(145deg,#84DAAD,#52B881); box-shadow:3px 3px 8px rgba(82,184,129,.35); }
+.dot-sug   { background:linear-gradient(145deg,#F9B98A,#F08060); box-shadow:3px 3px 8px rgba(240,128,96,.35); }
+.tl-body {
+  flex:1; border-radius:16px; padding:12px 16px; cursor:pointer;
+  background:var(--bg); box-shadow: 4px 4px 12px var(--sd), -4px -4px 12px var(--sl);
+  transition: box-shadow .13s, transform .12s;
+}
+.tl-body:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.98); }
+.tl-time   { font-size:11px; color:var(--muted); margin-bottom:3px; font-weight:500; }
+.tl-title  { font-size:14px; font-weight:700; color:var(--text); }
+.tl-detail { font-size:12px; color:var(--muted); margin-top:3px; }
+
+/* ── Loading / empty ──────────────────────────────────────────────────── */
+.loading, .empty { text-align:center; padding:48px 20px; color:var(--muted); }
+.spinner { width:36px; height:36px; border:3px solid rgba(163,175,200,.3); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; margin:0 auto 16px; }
+@keyframes spin { to{transform:rotate(360deg)} }
+.empty-ico { font-size:48px; margin-bottom:12px; }
+
+/* ── Toast ────────────────────────────────────────────────────────────── */
+.toast {
+  position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(70px);
+  padding:12px 24px; border-radius:30px; font-size:14px; font-weight:600; z-index:9999;
+  pointer-events:none; transition:transform .25s; white-space:nowrap;
+  background:var(--bg); color:var(--text);
+  box-shadow: 6px 6px 18px var(--sd), -6px -6px 18px var(--sl);
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* ── Delete button ───────────────────────────────────────────────────── */
+.del-btn {
+  margin-left:auto; background:var(--bg); color:var(--a-red); border:none;
+  border-radius:12px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer;
+  box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+}
+.del-btn:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
+
+/* ── Hint text ───────────────────────────────────────────────────────── */
+.hint { text-align:center; font-size:12px; color:var(--muted); margin-top:8px; }
+
+/* ── Last-site = RED (was orange) ────────────────────────────────────── */
+.site-btn.last { color:#DC2626; border-color:transparent; background:var(--bg);
+  box-shadow: 4px 4px 10px rgba(220,38,38,.25), -4px -4px 10px var(--sl); }
+.site-btn.last::after { content:' 🔴'; font-size:9px; }
+
+/* ── Needle reminder banner ──────────────────────────────────────────── */
+.banner-needle {
+  background:#FEE2E2; border:1.5px solid #FCA5A5; color:#991B1B;
+  border-radius:16px; padding:14px 18px; margin-bottom:12px; font-size:13px; font-weight:500;
+}
+.needle-reset-btn {
+  margin-top:10px; background:#DC2626; color:#fff; border:none;
+  border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;
+}
+
+
+/* ── Main chart ──────────────────────────────────────────────────────── */
+.chart-card { padding:16px 14px 12px; }
+.chart-title-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.chart-legend { display:flex; gap:14px; flex-wrap:wrap; }
+.leg { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); font-weight:500; }
+.leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+canvas#main-chart { width:100%; border-radius:12px; display:block; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════ MAIN ══════════════════════════════════ -->
+<div class="screen active" id="s-main">
+  <div class="hero">
+    <div class="hero-greeting">Добрый день</div>
+    <h1>Дневник диабетика</h1>
+    <div class="hero-time" id="main-time"></div>
+  </div>
+
+  <!-- Day chart -->
+  <div class="card chart-card" id="chart-card">
+    <div class="chart-title-row">
+      <div class="card-lbl" style="margin-bottom:0">Сегодня</div>
+      <div class="chart-legend">
+        <div class="leg"><div class="leg-dot" style="background:#F5A77A"></div>Сахар</div>
+        <div class="leg"><div class="leg-dot" style="background:#7B8FFF"></div>Апидра</div>
+        <div class="leg"><div class="leg-dot" style="background:#A78BFA"></div>Левемир</div>
+        <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>Всасывание</div>
+      </div>
+    </div>
+    <canvas id="main-chart" height="100"></canvas>
+  </div>
+
+
+  <div class="reminder" id="reminder" onclick="onReminderClick()">
+    <div class="r-icon">⏰</div>
+    <div class="r-title">Пора измерить сахар после еды</div>
+    <div class="r-sub" id="reminder-text"></div>
+  </div>
+
+  <div class="main-btns">
+    <button class="main-btn" onclick="go('s-ins')">
+      <div class="btn-icon-wrap ic-blue">💉</div>
+      <div class="btn-text-wrap">
+        <div class="btn-label">Укол инсулина</div>
+        <div class="btn-sub">Введите дозу и место</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </button>
+
+    <button class="main-btn" onclick="go('s-food')">
+      <div class="btn-icon-wrap ic-green">🍽️</div>
+      <div class="btn-text-wrap">
+        <div class="btn-label">Приём пищи</div>
+        <div class="btn-sub">ХЕ и сахар до еды</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </button>
+
+    <button class="main-btn" onclick="go('s-sug')">
+      <div class="btn-icon-wrap ic-orange">🩸</div>
+      <div class="btn-text-wrap">
+        <div class="btn-label">Сахар крови</div>
+        <div class="btn-sub">Показание глюкометра</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </button>
+  </div>
+
+  <button class="journal-btn" onclick="go('s-journal')">
+    <span>📊</span> Журнал за сегодня
+  </button>
+</div>
+
+<!-- ══════════════════════════════════ INSULIN ══════════════════════════════ -->
+<div class="screen" id="s-ins">
+  <div class="hdr">
+    <button class="back" onclick="go('s-main')">←</button>
+    <h1>Укол инсулина</h1>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Вид инсулина</div>
+    <div class="type-row">
+      <button class="type-opt" id="it-short" onclick="selInsType('short')">
+        <span class="t-ico">⚡</span>Болюс<br><span style="font-size:10px;font-weight:400">короткий</span>
+      </button>
+      <button class="type-opt" id="it-long" onclick="selInsType('long')">
+        <span class="t-ico">🌙</span>Базальный<br><span style="font-size:10px;font-weight:400">длинный</span>
+      </button>
+      <button class="type-opt" id="it-other" onclick="selInsType('other')">
+        <span class="t-ico">💊</span>Другой<br><span style="font-size:10px;font-weight:400">свой тип</span>
+      </button>
+    </div>
+    <div class="ins-name-row" id="ins-name-row">
+      <input type="text" class="inp" id="ins-name" placeholder="Название инсулина" style="margin-top:12px">
+    </div>
+  </div>
+
+  <!-- Needle reminder -->
+  <div class="banner-needle" id="needle-banner" style="display:none">
+    <strong>💉 Рекомендуется сменить иглу</strong><br>
+    Сделано <span id="needle-count">0</span> уколов с последней смены.
+    Частое использование одной иглы вызывает боль и уплотнения.
+    <br><button class="needle-reset-btn" onclick="resetNeedle()">✓ Иглу сменил(а)</button>
+  </div>
+
+  <div class="banner banner-sug" id="ins-suggestion">
+    <div id="ins-sug-text">Прошлый раз: <strong id="sug-last-val">—</strong> ед. Повторить?</div>
+    <button class="sug-use" onclick="useSuggestedDose()">Использовать →</button>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Количество единиц</div>
+    <div class="units-ctrl">
+      <button class="units-btn" onclick="adjUnits(-1)">−</button>
+      <input type="number" class="units-inp" id="ins-units" value="1" min="0.5" max="80" step="0.5" inputmode="decimal">
+      <button class="units-btn" onclick="adjUnits(1)">+</button>
+    </div>
+  </div>
+
+  <div class="banner banner-warn" id="site-warn">
+    ⚠️ Это место вы использовали в прошлый раз — пожалуйста, смените для профилактики уплотнений.
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Место укола</div>
+    <div class="site-grid" id="site-grid">
+      <button class="site-btn" id="site-sl" onclick="selSite('sl')"><span class="s-ico">🫃</span>Живот<br>левая</button>
+      <button class="site-btn" id="site-sr" onclick="selSite('sr')"><span class="s-ico">🫃</span>Живот<br>правая</button>
+      <button class="site-btn" id="site-al" onclick="selSite('al')"><span class="s-ico">💪</span>Рука<br>левая</button>
+      <button class="site-btn" id="site-ar" onclick="selSite('ar')"><span class="s-ico">💪</span>Рука<br>правая</button>
+      <button class="site-btn" id="site-bl" onclick="selSite('bl')"><span class="s-ico">🍑</span>Ягодица<br>левая</button>
+      <button class="site-btn" id="site-br" onclick="selSite('br')"><span class="s-ico">🍑</span>Ягодица<br>правая</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Время укола</div>
+    <div class="time-row">
+      <div class="time-val" id="ins-tdisp"></div>
+      <div class="time-toggle" onclick="toggleTime('ins')">Изменить</div>
+    </div>
+    <input type="datetime-local" class="inp" id="ins-tinp" style="display:none;margin-top:12px">
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Заметки</div>
+    <textarea class="inp" id="ins-notes" placeholder="Самочувствие, причина коррекции…"></textarea>
+  </div>
+
+  <button class="submit sub-blue" id="ins-submit" onclick="submitIns()">Сохранить укол</button>
+</div>
+
+<!-- ══════════════════════════════════ FOOD ══════════════════════════════════ -->
+<div class="screen" id="s-food">
+  <div class="hdr">
+    <button class="back" onclick="go('s-main')">←</button>
+    <h1>Приём пищи</h1>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="food-mode-wrap">
+    <button class="food-mode-btn sel" id="fm-search" onclick="setFoodMode('search')">🔍 Поиск продукта</button>
+    <button class="food-mode-btn"     id="fm-manual" onclick="setFoodMode('manual')">🔢 ХЕ вручную</button>
+  </div>
+
+  <!-- ── SEARCH MODE ── -->
+  <div id="food-search-mode">
+    <div class="card">
+      <div class="card-lbl">Найти продукт</div>
+      <div class="search-row">
+        <input type="text" class="inp" id="food-search-inp"
+               placeholder="Гречка, хлеб, молоко…" autocomplete="off"
+               oninput="onFoodSearch(this.value)">
+        <button class="barcode-btn" onclick="openBarcode()" title="Сканировать штрихкод">📷</button>
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+
+    <div class="card" id="selected-card" style="display:none">
+      <div class="card-lbl">Состав приёма пищи</div>
+      <div id="selected-list"></div>
+      <div class="total-he-bar">
+        <div class="the-label">Итого ХЕ</div>
+        <div class="the-val" id="total-he-val">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MANUAL MODE ── -->
+  <div id="food-manual-mode" style="display:none">
+    <div class="card">
+      <div class="card-lbl">Хлебные единицы (ХЕ)</div>
+      <div class="he-ctrl">
+        <button class="he-btn" onclick="heStep(-0.5)">−</button>
+        <div class="he-val" id="he-val">1</div>
+        <button class="he-btn" onclick="heStep(0.5)">+</button>
+      </div>
+      <div class="hint">1 ХЕ ≈ 10–12 г углеводов</div>
+      <div class="he-presets">
+        <button class="he-pre" onclick="heSet(0.5)">½</button>
+        <button class="he-pre" onclick="heSet(1)">1</button>
+        <button class="he-pre" onclick="heSet(1.5)">1½</button>
+        <button class="he-pre" onclick="heSet(2)">2</button>
+        <button class="he-pre" onclick="heSet(2.5)">2½</button>
+        <button class="he-pre" onclick="heSet(3)">3</button>
+        <button class="he-pre" onclick="heSet(4)">4</button>
+        <button class="he-pre" onclick="heSet(5)">5</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Common: sugar before + description + time -->
+  <div class="card">
+    <div class="card-lbl">Сахар перед едой (ммоль/л)</div>
+    <input type="number" class="inp inp-big inp-center" id="food-sug"
+           placeholder="—" step="0.1" min="1" max="35" inputmode="decimal">
+    <div class="hint">Необязательно, помогает анализу</div>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Заметки</div>
+    <textarea class="inp" id="food-desc" placeholder="Завтрак, обед, перекус…"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Время приёма пищи</div>
+    <div class="time-row">
+      <div class="time-val" id="food-tdisp"></div>
+      <div class="time-toggle" onclick="toggleTime('food')">Изменить</div>
+    </div>
+    <input type="datetime-local" class="inp" id="food-tinp" style="display:none;margin-top:12px">
+  </div>
+
+  <button class="submit sub-green" id="food-submit" onclick="submitFood()">Сохранить приём пищи</button>
+</div>
+
+<!-- Barcode modal -->
+<div class="modal-overlay" id="barcode-modal">
+  <div class="modal-box">
+    <div class="modal-title">📷 Сканирование штрихкода</div>
+    <video class="modal-video" id="barcode-video" autoplay muted playsinline></video>
+    <div class="modal-hint" id="barcode-hint">Наведите камеру на штрихкод упаковки</div>
+    <div class="modal-manual-inp">
+      <input type="number" class="inp" id="barcode-manual-inp" placeholder="Введите штрихкод вручную" inputmode="numeric">
+      <button onclick="lookupBarcode(document.getElementById('barcode-manual-inp').value)">→</button>
+    </div>
+    <button class="modal-close" onclick="closeBarcode()">Закрыть</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SUGAR ══════════════════════════════════ -->
+<div class="screen" id="s-sug">
+  <div class="hdr">
+    <button class="back" onclick="go('s-main')">←</button>
+    <h1>Сахар крови</h1>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Уровень глюкозы (ммоль/л)</div>
+    <input type="number" class="sug-big" id="sug-val"
+           placeholder="0.0" step="0.1" min="1" max="35" inputmode="decimal">
+    <div class="sug-indicator" id="sug-ind"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Когда измерено</div>
+    <div class="type-row">
+      <button class="type-opt" id="st-manual" onclick="selSugType('manual')">
+        <span class="t-ico">📏</span>Просто<br>измерение
+      </button>
+      <button class="type-opt" id="st-before" onclick="selSugType('before')">
+        <span class="t-ico">🍽️</span>Перед<br>едой
+      </button>
+      <button class="type-opt" id="st-after" onclick="selSugType('after')">
+        <span class="t-ico">⏰</span>После<br>еды
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-lbl">Время измерения</div>
+    <div class="time-row">
+      <div class="time-val" id="sug-tdisp"></div>
+      <div class="time-toggle" onclick="toggleTime('sug')">Изменить</div>
+    </div>
+    <input type="datetime-local" class="inp" id="sug-tinp" style="display:none;margin-top:12px">
+  </div>
+
+  <button class="submit sub-red" id="sug-submit" onclick="submitSug()">Сохранить показание</button>
+</div>
+
+<!-- ══════════════════════════════════ JOURNAL ════════════════════════════════ -->
+<div class="screen" id="s-journal">
+  <div class="hdr">
+    <button class="back" onclick="go('s-main')">←</button>
+    <h1>Журнал</h1>
+  </div>
+
+  <div class="date-nav">
+    <button class="dn-btn" onclick="navDate(-1)">‹</button>
+    <div class="dn-label" id="dn-label"></div>
+    <button class="dn-btn" onclick="navDate(1)">›</button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat"><div class="stat-val sv-blue"  id="st-ins">—</div><div class="stat-lbl">Инсулин ед.</div></div>
+    <div class="stat"><div class="stat-val sv-green" id="st-he">—</div><div class="stat-lbl">ХЕ всего</div></div>
+    <div class="stat"><div class="stat-val sv-red"   id="st-sug">—</div><div class="stat-lbl">Ср. сахар</div></div>
+  </div>
+
+  <div id="j-loading" class="loading"><div class="spinner"></div>Загрузка…</div>
+  <div id="j-content" style="display:none"><div id="tl"></div></div>
+  <div id="j-empty" class="empty" style="display:none"><div class="empty-ico">📋</div>За этот день нет записей</div>
+</div>
+
+<!-- ══════════════════════════════════ EDIT ════════════════════════════════════ -->
+<div class="screen" id="s-edit">
+  <div class="hdr">
+    <button class="back" onclick="go('s-journal')">←</button>
+    <h1 id="edit-title">Редактировать</h1>
+    <button class="del-btn" onclick="confirmDelete()">Удалить</button>
+  </div>
+  <div id="edit-body"></div>
+  <button class="submit sub-blue" id="edit-submit" onclick="submitEdit()">Сохранить изменения</button>
+</div>
+
+<script>
+/* ═══════════ STATE ════════════════════════════════════════════════════ */
+const S = {
+  insType:'short', selSite:null, lastSite:null,
+  lastLong:0, lastShort:0, lastLongN:'Базальный', lastShortN:'Болюс',
+  he:1.0, sugType:'manual',
+  journDate:todayLocal(), jData:null,
+  editType:null, editId:null, pendFoodId:null,
+  timeCustom:{}
+};
+
+/* ═══════════ TIME ═════════════════════════════════════════════════════ */
+// All times use the device's own clock and timezone — no hardcoded offset.
+function pad(n) { return String(n).padStart(2,'0'); }
+function todayLocal() {
+  const d=new Date();
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+// Format a stored UTC ISO string for display in device local time
+function fmtDisp(iso) {
+  const d=new Date(iso);
+  return pad(d.getDate())+'.'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+// Format a Date object as a datetime-local input value (device local time)
+function fmtInput(d) {
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+// Convert datetime-local input value (device local time) to UTC ISO for storage
+function inputToUTC(val) {
+  // datetime-local strings without timezone suffix are parsed as LOCAL time by browsers
+  const d = new Date(val);
+  return isNaN(d) ? new Date().toISOString() : d.toISOString();
+}
+
+function getSubmitTime(id) {
+  const i=document.getElementById(id+'-tinp');
+  if(i && i.style.display!=='none' && i.value) return inputToUTC(i.value);
+  return new Date().toISOString();
+}
+function refreshTimeDisplays() {
+  const n=new Date(), disp=fmtDisp(n.toISOString()), inpv=fmtInput(n);
+  ['ins','food','sug'].forEach(k=>{
+    const d=document.getElementById(k+'-tdisp');
+    const i=document.getElementById(k+'-tinp');
+    if(d) d.textContent=disp;
+    if(i && !S.timeCustom[k]) i.value=inpv;
+  });
+}
+function toggleTime(k) {
+  const inp=document.getElementById(k+'-tinp');
+  const tog=inp.previousElementSibling.lastElementChild;
+  if(inp.style.display==='none'){
+    inp.value=fmtInput(new Date()); inp.style.display='block';
+    tog.textContent='Сейчас'; S.timeCustom[k]=true;
+  } else {
+    inp.style.display='none'; tog.textContent='Изменить'; S.timeCustom[k]=false;
+  }
+}
+
+/* ═══════════ TOAST ════════════════════════════════════════════════════ */
+let _tt;
+function toast(msg,ms=2600){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+/* ═══════════ NAV ══════════════════════════════════════════════════════ */
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='s-main')    initMain();
+  if(id==='s-ins')     initIns();
+  if(id==='s-food')    initFood();
+  if(id==='s-sug')     initSug();
+  if(id==='s-journal') initJournal();
+}
+
+/* ═══════════ MAIN ═════════════════════════════════════════════════════ */
+function initMain(){
+  const n=new Date();
+  const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const mons=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const h=n.getHours();
+  const greet= h<6?'Доброй ночи': h<12?'Доброе утро': h<18?'Добрый день':'Добрый вечер';
+  document.querySelector('#s-main .hero-greeting').textContent=greet;
+  document.getElementById('main-time').textContent=
+    days[n.getDay()]+', '+n.getDate()+' '+mons[n.getMonth()]+
+    ' · '+pad(n.getHours())+':'+pad(n.getMinutes());
+  checkPending();
+  loadTodayChart();
+}
+
+function dayBoundsISO(localDateStr){
+  const [yr,mo,dy]=localDateStr.split('-').map(Number);
+  return { s: new Date(yr,mo-1,dy,0,0,0,0).toISOString(),
+           e: new Date(yr,mo-1,dy,23,59,59,999).toISOString() };
+}
+function loadTodayChart(){
+  drawChart({insulin:[],food:[],sugar:[]});
+  const _d=todayLocal(), _b=dayBoundsISO(_d);
+  google.script.run.withSuccessHandler(r=>{
+    if(r&&r.ok) drawChart(r);
+  }).withFailureHandler(()=>{}).getSummary(_d, _b.s, _b.e);
+}
+function checkPending(){
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok&&r.pending&&r.pending.length){
+      S.pendFoodId=r.pending[0].id;
+      document.getElementById('reminder-text').textContent=
+        'Поели в '+fmtDisp(r.pending[0].time)+' — нажмите, чтобы внести';
+      document.getElementById('reminder').style.display='block';
+    } else document.getElementById('reminder').style.display='none';
+  }).withFailureHandler(()=>{}).getPendingSugars();
+}
+function onReminderClick(){ S.sugType='after'; go('s-sug'); }
+
+/* ═══════════ UNITS INPUT ══════════════════════════════════════════════ */
+function getUnits(){ return Math.max(0.5, parseFloat(document.getElementById('ins-units').value)||1); }
+function setUnits(v){ document.getElementById('ins-units').value = Math.max(0.5, Math.min(80, Math.round(v*2)/2)); }
+function adjUnits(d){ setUnits(getUnits()+d); }
+
+/* ═══════════ INSULIN ══════════════════════════════════════════════════ */
+function initIns(){
+  S.selSite=null; S.timeCustom.ins=false;
+  document.getElementById('ins-notes').value='';
+  document.getElementById('ins-tinp').style.display='none';
+  document.getElementById('ins-units').value='1';
+  document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('sel','last'));
+  document.getElementById('site-warn').classList.remove('visible');
+  document.getElementById('needle-banner').style.display='none';
+  refreshTimeDisplays();
+  google.script.run.withSuccessHandler(info=>{
+    S.lastSite=info.lastSite; S.lastLong=parseInt(info.lastLongDose)||0;
+    S.lastShort=parseInt(info.lastShortDose)||0;
+    S.lastLongN=info.lastLongName||'Базальный'; S.lastShortN=info.lastShortName||'Болюс';
+    S.needleCount=parseInt(info.needleCount)||0;
+    // Mark last site in red
+    if(S.lastSite){ const el=document.getElementById('site-'+S.lastSite); if(el)el.classList.add('last'); }
+    // Show needle reminder if ≥5 injections since last change
+    if(S.needleCount>=5){
+      document.getElementById('needle-count').textContent=S.needleCount;
+      document.getElementById('needle-banner').style.display='block';
+    }
+    selInsType('short');
+  }).withFailureHandler(()=>selInsType('short')).getLastInsulinInfo();
+}
+
+
+function resetNeedle(){
+  google.script.run.withSuccessHandler(()=>{
+    document.getElementById('needle-banner').style.display='none';
+    S.needleCount=0;
+    toast('✅ Счётчик иглы сброшен');
+  }).withFailureHandler(()=>toast('❌ Ошибка')).resetNeedle();
+}
+function selInsType(t){
+  S.insType=t;
+  ['short','long','other'].forEach(x=>document.getElementById('it-'+x).classList.toggle('sel',x===t));
+  document.getElementById('ins-name-row').classList.toggle('visible',t==='other');
+  const sug=document.getElementById('ins-suggestion');
+  const dose=t==='long'?S.lastLong:S.lastShort;
+  const name=t==='long'?S.lastLongN:S.lastShortN;
+  if(dose>0&&t!=='other'){
+    document.getElementById('ins-sug-text').innerHTML=
+      'Прошлый раз: <strong>'+dose+' ед. '+name+'</strong>. Повторить?';
+    sug.classList.add('visible');
+  } else sug.classList.remove('visible');
+}
+function useSuggestedDose(){
+  setUnits(S.insType==='long' ? S.lastLong : S.lastShort);
+}
+function selSite(s){
+  S.selSite=s;
+  document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('site-'+s).classList.add('sel');
+  document.getElementById('site-warn').classList.toggle('visible',s===S.lastSite);
+}
+function getInsName(){
+  if(S.insType==='long')  return S.lastLongN||'Базальный';
+  if(S.insType==='short') return S.lastShortN||'Болюс';
+  return document.getElementById('ins-name').value.trim()||'Другой';
+}
+function submitIns(){
+  const units=getUnits();
+  if(!S.selSite){toast('⚠️ Выберите место укола');return;}
+  if(!units||units<=0){toast('⚠️ Укажите количество единиц');return;}
+  const btn=document.getElementById('ins-submit');
+  btn.disabled=true; btn.textContent='Сохранение…';
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить укол';
+    if(r.ok){toast('✅ Укол сохранён');setTimeout(()=>go('s-main'),700);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить укол';toast('❌ Ошибка');})
+  .saveInsulin({time:getSubmitTime('ins'),insulinType:S.insType,insulinName:getInsName(),
+    units,site:S.selSite,notes:document.getElementById('ins-notes').value});
+}
+
+/* ═══════════ FOOD ═════════════════════════════════════════════════════ */
+// selected foods: [{name, carbs, fat, protein, grams}]
+let selectedFoods = [];
+let foodSearchTimer = null;
+let foodMode = 'search'; // 'search' | 'manual'
+
+function initFood(){
+  S.he=1; S.timeCustom.food=false; selectedFoods=[];
+  updHE(); updSelectedFoods();
+  document.getElementById('food-sug').value='';
+  document.getElementById('food-desc').value='';
+  document.getElementById('food-tinp').style.display='none';
+  document.getElementById('food-search-inp').value='';
+  document.getElementById('search-results').innerHTML='';
+  document.getElementById('search-results').classList.remove('open');
+  setFoodMode(foodMode);
+  refreshTimeDisplays();
+}
+
+function setFoodMode(mode){
+  foodMode=mode;
+  document.getElementById('fm-search').classList.toggle('sel', mode==='search');
+  document.getElementById('fm-manual').classList.toggle('sel', mode==='manual');
+  document.getElementById('food-search-mode').style.display = mode==='search'?'block':'none';
+  document.getElementById('food-manual-mode').style.display = mode==='manual'?'block':'none';
+}
+
+function heStep(d){ S.he=Math.max(0,Math.round((S.he+d)*2)/2); updHE(); }
+function heSet(v){ S.he=v; updHE(); }
+function updHE(){ document.getElementById('he-val').textContent=S.he%1===0?S.he:S.he.toFixed(1); }
+
+// ── Food search ─────────────────────────────────────────────────────────────
+
+function onFoodSearch(query){
+  clearTimeout(foodSearchTimer);
+  const box=document.getElementById('search-results');
+  if(!query.trim()){box.innerHTML='';box.classList.remove('open');return;}
+  box.innerHTML='<div style="text-align:center;color:var(--muted);padding:10px;font-size:13px">Ищу…</div>';
+  box.classList.add('open');
+  foodSearchTimer=setTimeout(()=>{
+    google.script.run.withSuccessHandler(r=>{
+      if(!r||!r.ok){box.innerHTML='';box.classList.remove('open');return;}
+      renderSearchResults(r.results, query, false);
+    }).withFailureHandler(()=>{box.innerHTML='';box.classList.remove('open');}).searchFoods(query);
+  }, 300);
+}
+
+// Close search results when focus leaves the search area
+document.addEventListener('click', e=>{
+  const wrap=document.getElementById('food-search-mode');
+  if(wrap && !wrap.contains(e.target)){
+    const box=document.getElementById('search-results');
+    if(box){box.innerHTML='';box.classList.remove('open');}
+  }
+});
+
+function renderSearchResults(results, query, fromOnline){
+  const box=document.getElementById('search-results');
+  box.innerHTML='';
+  box.classList.add('open');
+
+  if(results.length===0){
+    const msg=document.createElement('div');
+    msg.style.cssText='text-align:center;color:var(--muted);padding:10px;font-size:13px';
+    msg.textContent = fromOnline ? 'Ничего не найдено' : 'В базе не найдено';
+    box.appendChild(msg);
+    if(fromOnline) return;
+  } else {
+    results.forEach(f=>{
+      const el=document.createElement('div');
+      el.className='sr-item';
+      const he=(f.carbs/12).toFixed(1);
+      const kcal=f.kcal||Math.round(f.carbs*4+f.fat*9+f.protein*4);
+      el.innerHTML=`<div class="sr-name">${f.name}</div>
+        <div class="sr-macros">У: ${f.carbs}г · Ж: ${f.fat}г · Б: ${f.protein}г · ${kcal} ккал · <strong style="color:var(--a-green)">${he} ХЕ/100г</strong></div>`;
+      el.onclick=()=>addFood(f);
+      box.appendChild(el);
+    });
+  }
+
+  if(!fromOnline){
+    const onlineBtn=document.createElement('button');
+    onlineBtn.className='sr-online-btn';
+    onlineBtn.textContent='🌐 Искать онлайн (Open Food Facts)';
+    onlineBtn.onclick=()=>{
+      onlineBtn.textContent='Ищем…'; onlineBtn.disabled=true;
+      const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+
+        encodeURIComponent(query)+
+        '&search_simple=1&action=process&json=1&page_size=8'+
+        '&fields=product_name,product_name_ru,nutriments&lc=ru&cc=ru';
+      fetch(url)
+        .then(res=>res.json())
+        .then(data=>{
+          if(!data.products){renderSearchResults([],query,true);return;}
+          const results=(data.products||[])
+            .filter(p=>p.nutriments&&p.nutriments['carbohydrates_100g']!=null)
+            .slice(0,8)
+            .map(p=>({
+              name: p.product_name_ru||p.product_name||'—',
+              carbs: +(p.nutriments['carbohydrates_100g']||0).toFixed(1),
+              fat:   +(p.nutriments['fat_100g']||0).toFixed(1),
+              protein: +(p.nutriments['proteins_100g']||0).toFixed(1),
+              kcal:  +(p.nutriments['energy-kcal_100g']||0).toFixed(0)
+            }));
+          renderSearchResults(results,query,true);
+        })
+        .catch(()=>{onlineBtn.textContent='🌐 Искать онлайн'; onlineBtn.disabled=false; toast('❌ Нет сети');});
+    };
+    box.appendChild(onlineBtn);
+  }
+}
+
+function addFood(food){
+  selectedFoods.push({...food, grams:100});
+  updSelectedFoods();
+  document.getElementById('food-search-inp').value='';
+  document.getElementById('search-results').innerHTML='';
+  document.getElementById('search-results').classList.remove('open');
+}
+
+function updSelectedFoods(){
+  const list=document.getElementById('selected-list');
+  const card=document.getElementById('selected-card');
+  if(!selectedFoods.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  list.innerHTML='';
+  let totalHE=0;
+  selectedFoods.forEach((f,i)=>{
+    const he=+(f.carbs*f.grams/100/12).toFixed(2);
+    totalHE+=he;
+    const el=document.createElement('div');
+    el.className='selected-food';
+    el.innerHTML=`
+      <div class="sf-name">${f.name}</div>
+      <input class="sf-gram" type="number" value="${f.grams}" min="1" max="2000"
+             oninput="updateGrams(${i},this.value)" inputmode="numeric">
+      <div class="sf-he" id="sfhe-${i}">${he%1===0?he:he.toFixed(1)}<small style="font-weight:500;font-size:10px"> ХЕ</small></div>
+      <div class="sf-del" onclick="removeFood(${i})">✕</div>`;
+    list.appendChild(el);
+  });
+  document.getElementById('total-he-val').textContent=
+    totalHE%1===0 ? totalHE : totalHE.toFixed(1);
+}
+
+function updateGrams(i,val){
+  selectedFoods[i].grams=Math.max(1,parseInt(val)||100);
+  // Update just the HE label without re-rendering entire list
+  const f=selectedFoods[i];
+  const he=+(f.carbs*f.grams/100/12).toFixed(2);
+  const el=document.getElementById('sfhe-'+i);
+  if(el) el.innerHTML=(he%1===0?he:he.toFixed(1))+'<small style="font-weight:500;font-size:10px"> ХЕ</small>';
+  // Recompute total
+  const total=selectedFoods.reduce((s,x)=>s+x.carbs*x.grams/100/12, 0);
+  document.getElementById('total-he-val').textContent=
+    total%1===0?total:total.toFixed(1);
+}
+
+function removeFood(i){
+  selectedFoods.splice(i,1);
+  updSelectedFoods();
+}
+
+function getTotalHE(){
+  if(foodMode==='search'){
+    if(!selectedFoods.length) return S.he;
+    return +selectedFoods.reduce((s,f)=>s+f.carbs*f.grams/100/12, 0).toFixed(2);
+  }
+  return S.he;
+}
+
+function getFoodDescription(){
+  if(foodMode==='search' && selectedFoods.length){
+    return selectedFoods.map(f=>`${f.name} ${f.grams}г`).join(', ');
+  }
+  return document.getElementById('food-desc').value;
+}
+
+// ── Barcode scanner ─────────────────────────────────────────────────────────
+
+let barcodeStream=null, barcodeDetector=null, barcodeTimer=null;
+
+function openBarcode(){
+  document.getElementById('barcode-modal').classList.add('open');
+  document.getElementById('barcode-hint').textContent='Наведите камеру на штрихкод';
+  document.getElementById('barcode-manual-inp').value='';
+
+  if(!('BarcodeDetector' in window)){
+    document.getElementById('barcode-hint').textContent='Сканер недоступен в вашем браузере — введите штрихкод вручную';
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:1280}})
+    .then(stream=>{
+      barcodeStream=stream;
+      const video=document.getElementById('barcode-video');
+      video.srcObject=stream;
+      barcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
+      barcodeTimer=setInterval(async()=>{
+        try{
+          const codes=await barcodeDetector.detect(video);
+          if(codes.length){ lookupBarcode(codes[0].rawValue); }
+        }catch(e){}
+      }, 600);
+    })
+    .catch(()=>{
+      document.getElementById('barcode-hint').textContent='Нет доступа к камере — введите штрихкод вручную';
+    });
+}
+
+function closeBarcode(){
+  clearInterval(barcodeTimer);
+  if(barcodeStream) barcodeStream.getTracks().forEach(t=>t.stop());
+  barcodeStream=null;
+  document.getElementById('barcode-modal').classList.remove('open');
+  document.getElementById('barcode-video').srcObject=null;
+}
+
+function lookupBarcode(barcode){
+  if(!barcode) return;
+  closeBarcode();
+  toast('🔍 Ищем штрихкод '+barcode+'…');
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok && r.food){ addFood(r.food); toast('✅ '+r.food.name+' добавлен'); }
+    else toast('❌ Продукт не найден в базе Open Food Facts');
+  }).withFailureHandler(()=>toast('❌ Ошибка запроса')).getFoodByBarcode(barcode);
+}
+
+function submitFood(){
+  const he=getTotalHE();
+  if(foodMode==='search' && !selectedFoods.length && he===0){
+    toast('⚠️ Добавьте хотя бы один продукт'); return;
+  }
+  const btn=document.getElementById('food-submit');
+  btn.disabled=true; btn.textContent='Сохранение…';
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить приём пищи';
+    if(r.ok){
+      selectedFoods=[];
+      toast('✅ Приём пищи сохранён'); setTimeout(()=>go('s-main'),700);
+    } else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить приём пищи';toast('❌ Ошибка');})
+  .saveFood({time:getSubmitTime('food'), he, description:getFoodDescription(),
+    sugarBefore:document.getElementById('food-sug').value});
+}
+
+/* ═══════════ SUGAR ════════════════════════════════════════════════════ */
+function initSug(){
+  S.timeCustom.sug=false;
+  document.getElementById('sug-val').value='';
+  document.getElementById('sug-ind').textContent='';
+  document.getElementById('sug-tinp').style.display='none';
+  refreshTimeDisplays();
+  selSugType(S.sugType||'manual');
+}
+function selSugType(t){
+  S.sugType=t;
+  ['manual','before','after'].forEach(x=>document.getElementById('st-'+x).classList.toggle('sel',x===t));
+}
+document.getElementById('sug-val').addEventListener('input',function(){
+  const v=parseFloat(this.value),el=document.getElementById('sug-ind');
+  if(!v){el.textContent='';el.style.color='';return;}
+  if(v<3.9)      {el.textContent='🔴 Гипогликемия!'; el.style.color='#E05050';}
+  else if(v<=5.5){el.textContent='🟢 Норма';          el.style.color='#4CAF7A';}
+  else if(v<=7.8){el.textContent='🟡 Немного повышен';el.style.color='#C09020';}
+  else if(v<=11) {el.textContent='🟠 Повышен';        el.style.color='#D07030';}
+  else           {el.textContent='🔴 Высокий!';       el.style.color='#E05050';}
+});
+function submitSug(){
+  const val=parseFloat(document.getElementById('sug-val').value);
+  if(!val||val<1||val>35){toast('⚠️ Введите значение от 1 до 35');return;}
+  const btn=document.getElementById('sug-submit');
+  btn.disabled=true; btn.textContent='Сохранение…';
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить показание';
+    if(r.ok){S.pendFoodId=null;S.sugType='manual';toast('✅ Сахар сохранён');setTimeout(()=>go('s-main'),700);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить показание';toast('❌ Ошибка');})
+  .saveSugar({time:getSubmitTime('sug'),value:val,sugarType:S.sugType,foodId:S.sugType==='after'?S.pendFoodId:null});
+}
+
+/* ═══════════ JOURNAL ══════════════════════════════════════════════════ */
+function initJournal(){ renderDateLabel(); loadJournal(); }
+function renderDateLabel(){
+  const p=S.journDate.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
+  const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const mons=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  document.getElementById('dn-label').textContent=days[d.getDay()]+' '+d.getDate()+' '+mons[d.getMonth()]+' '+d.getFullYear();
+}
+function navDate(delta){
+  const p=S.journDate.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
+  d.setDate(d.getDate()+delta);
+  S.journDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+
+  // Brief slide animation: content slides out, then reloads
+  const content=document.getElementById('j-content');
+  const empty=document.getElementById('j-empty');
+  [content,empty].forEach(el=>{
+    el.style.transition='transform .18s ease, opacity .18s ease';
+    el.style.transform='translateX('+(delta<0?'60px':'-60px')+')';
+    el.style.opacity='0';
+  });
+  setTimeout(()=>{
+    [content,empty].forEach(el=>{
+      el.style.transition='none'; el.style.transform=''; el.style.opacity='';
+    });
+    renderDateLabel(); loadJournal();
+  }, 180);
+}
+
+// ── Swipe navigation on the journal screen ───────────────────────────────────
+(function(){
+  let _sx=0, _sy=0;
+  const scr=document.getElementById('s-journal');
+  scr.addEventListener('touchstart',e=>{
+    _sx=e.touches[0].clientX; _sy=e.touches[0].clientY;
+  },{passive:true});
+  scr.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-_sx;
+    const dy=e.changedTouches[0].clientY-_sy;
+    if(Math.abs(dx)>Math.abs(dy)*1.5 && Math.abs(dx)>50){
+      navDate(dx<0?1:-1); // swipe left = next day, swipe right = prev day
+    }
+  },{passive:true});
+})();
+function showJEmpty(msg){
+  const el=document.getElementById('j-empty');
+  el.innerHTML=(msg?'<div style="color:var(--a-red);font-size:13px;margin-bottom:8px">⚠️ '+msg+'</div>':'')
+    +'<div class="empty-ico">📋</div>За этот день нет записей';
+  el.style.display='block';
+}
+function loadJournal(){
+  document.getElementById('j-loading').style.display='block';
+  document.getElementById('j-content').style.display='none';
+  document.getElementById('j-empty').style.display='none';
+  const _b = dayBoundsISO(S.journDate);
+  google.script.run
+    .withSuccessHandler(function(r){
+      document.getElementById('j-loading').style.display='none';
+      if(!r){ showJEmpty('Нет ответа от сервера'); return; }
+      if(!r.ok){ showJEmpty(r.error||'Ошибка на сервере'); return; }
+      S.jData = r;
+      // stat cards
+      const ins = r.totalInsulin||0, he = r.totalHE||0;
+      document.getElementById('st-ins').textContent = ins%1===0 ? ins : ins.toFixed(1);
+      document.getElementById('st-he').textContent  = he%1===0  ? he  : he.toFixed(1);
+      document.getElementById('st-sug').textContent = r.avgSugar ? r.avgSugar.toFixed(1) : '—';
+      // merge & sort all records
+      var all = [];
+      (r.insulin||[]).forEach(function(x){ all.push(Object.assign({},x,{cat:'ins'})); });
+      (r.food||[]).forEach(function(x){    all.push(Object.assign({},x,{cat:'food'})); });
+      (r.sugar||[]).forEach(function(x){   all.push(Object.assign({},x,{cat:'sug'})); });
+      all.sort(function(a,b){ return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; });
+      if(!all.length){ showJEmpty(); return; }
+      document.getElementById('j-content').style.display='block';
+      var tl=document.getElementById('tl'); tl.innerHTML='';
+      all.forEach(function(item){ tl.appendChild(buildTL(item)); });
+    })
+    .withFailureHandler(function(e){
+      document.getElementById('j-loading').style.display='none';
+      showJEmpty('Ошибка связи: '+(e&&e.message ? e.message : String(e)));
+    })
+    .getSummary(S.journDate, _b.s, _b.e);
+}
+const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
+function buildTL(item){
+  const w=document.createElement('div'); w.className='tl-item';
+  let title='',detail='';
+  if(item.cat==='ins'){
+    const tl=item.insulinType==='long'?'Базальный':(item.insulinType==='short'?'Болюс':'Инсулин');
+    title=tl+(item.insulinName?' ('+item.insulinName+')':'')+' — '+item.units+' ед.';
+    detail=(SITES[item.site]||item.site||'')+(item.notes?' · '+item.notes:'');
+  } else if(item.cat==='food'){
+    const he=parseFloat(item.he);
+    title=(he%1===0?he:he.toFixed(1))+' ХЕ';
+    detail=(item.sugarBefore?'Сахар до: '+item.sugarBefore+' · ':'')+( item.description||'');
+  } else {
+    const v=parseFloat(item.value),mark=v<3.9?'🔴':v<=5.5?'🟢':v<=7.8?'🟡':'🟠';
+    title='Сахар: '+v+' ммоль/л';
+    const tl={manual:'',before:'перед едой',after:'после еды'};
+    detail=mark+(tl[item.sugarType]?' '+tl[item.sugarType]:'');
+  }
+  const dc={ins:'dot-ins',food:'dot-food',sug:'dot-sug'},em={ins:'💉',food:'🍽️',sug:'🩸'};
+  w.innerHTML=`<div class="tl-dot ${dc[item.cat]}">${em[item.cat]}</div>
+    <div class="tl-body" onclick="openEdit('${item.cat}','${item.id}')">
+      <div class="tl-time">${fmtDisp(item.time)}</div>
+      <div class="tl-title">${title}</div>
+      ${detail?'<div class="tl-detail">'+detail+'</div>':''}
+    </div>`;
+  return w;
+}
+
+/* ═══════════ EDIT ═════════════════════════════════════════════════════ */
+function openEdit(cat,id){
+  S.editType=cat; S.editId=id;
+  document.getElementById('edit-title').textContent={ins:'Редактировать укол',food:'Редактировать приём пищи',sug:'Редактировать сахар'}[cat];
+  let rec=null;
+  if(cat==='ins')  rec=S.jData.insulin.find(r=>r.id===id);
+  if(cat==='food') rec=S.jData.food.find(r=>r.id===id);
+  if(cat==='sug')  rec=S.jData.sugar.find(r=>r.id===id);
+  if(!rec) return;
+  const tv=fmtInput(new Date(rec.time));
+  let html=`<div class="card"><div class="card-lbl">Время</div><input type="datetime-local" class="inp" id="e-time" value="${tv}"></div>`;
+  if(cat==='ins'){
+    const sOpts=[['sl','Живот левая'],['sr','Живот правая'],['al','Рука левая'],['ar','Рука правая'],['bl','Ягодица левая'],['br','Ягодица правая']]
+      .map(([v,l])=>`<option value="${v}" ${rec.site===v?'selected':''}>${l}</option>`).join('');
+    html+=`<div class="card"><div class="card-lbl">Вид</div>
+      <select class="inp" id="e-itype">
+        <option value="short" ${rec.insulinType==='short'?'selected':''}>Болюс (короткий)</option>
+        <option value="long"  ${rec.insulinType==='long'?'selected':''}>Базальный (длинный)</option>
+        <option value="other" ${rec.insulinType==='other'?'selected':''}>Другой</option>
+      </select></div>
+      <div class="card"><div class="card-lbl">Название</div><input class="inp" id="e-iname" value="${rec.insulinName||''}"></div>
+      <div class="card"><div class="card-lbl">Единицы</div><input type="number" class="inp inp-big inp-center" id="e-units" value="${rec.units}" min="0" max="80"></div>
+      <div class="card"><div class="card-lbl">Место</div><select class="inp" id="e-site">${sOpts}</select></div>
+      <div class="card"><div class="card-lbl">Заметки</div><textarea class="inp" id="e-notes">${rec.notes||''}</textarea></div>`;
+  } else if(cat==='food'){
+    html+=`<div class="card"><div class="card-lbl">ХЕ</div><input type="number" class="inp inp-big inp-center" id="e-he" value="${rec.he}" min="0" max="30" step="0.5"></div>
+      <div class="card"><div class="card-lbl">Что ели</div><textarea class="inp" id="e-desc">${rec.description||''}</textarea></div>
+      <div class="card"><div class="card-lbl">Сахар до (ммоль/л)</div><input type="number" class="inp inp-center" id="e-sbefore" value="${rec.sugarBefore||''}" step="0.1"></div>`;
+  } else {
+    html+=`<div class="card"><div class="card-lbl">Значение (ммоль/л)</div><input type="number" class="sug-big" id="e-sval" value="${rec.value}" step="0.1"></div>`;
+  }
+  document.getElementById('edit-body').innerHTML=html;
+  go('s-edit');
+}
+function submitEdit(){
+  const tv=document.getElementById('e-time');
+  const time=tv&&tv.value?inputToUTC(tv.value):null;
+  let patch={time};
+  if(S.editType==='ins'){patch.insulinType=document.getElementById('e-itype').value;patch.insulinName=document.getElementById('e-iname').value;patch.units=document.getElementById('e-units').value;patch.site=document.getElementById('e-site').value;patch.notes=document.getElementById('e-notes').value;}
+  else if(S.editType==='food'){patch.he=document.getElementById('e-he').value;patch.description=document.getElementById('e-desc').value;patch.sugarBefore=document.getElementById('e-sbefore').value;}
+  else{patch.value=document.getElementById('e-sval').value;}
+  const btn=document.getElementById('edit-submit'); btn.disabled=true; btn.textContent='Сохранение…';
+  const type=S.editType==='ins'?'insulin':S.editType;
+  google.script.run.withSuccessHandler(r=>{
+    btn.disabled=false; btn.textContent='Сохранить изменения';
+    if(r.ok){toast('✅ Обновлено');setTimeout(()=>go('s-journal'),600);}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить изменения';toast('❌ Ошибка');})
+  .updateRecord(type,S.editId,patch);
+}
+function confirmDelete(){
+  if(!confirm('Удалить эту запись?')) return;
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok){toast('🗑️ Запись удалена');go('s-journal');}
+    else toast('❌ '+r.error);
+  }).withFailureHandler(()=>toast('❌ Ошибка удаления'))
+  .deleteRecord(S.editType==='ins'?'insulin':S.editType,S.editId);
+}
+
+/* ═══════════ INSULIN PHARMACOKINETICS ════════════════════════════════ */
+
+// Piece-wise linear interpolation of drug activity profile
+function interpolatePK(profile, t_h) {
+  if (t_h <= 0) return 0;
+  for (let i = 0; i < profile.length - 1; i++) {
+    if (t_h >= profile[i][0] && t_h <= profile[i+1][0]) {
+      const f = (t_h - profile[i][0]) / (profile[i+1][0] - profile[i][0]);
+      return profile[i][1] + f * (profile[i+1][1] - profile[i][1]);
+    }
+  }
+  return 0;
+}
+
+// Apidra (glulisine) profile — onset 10-20 min, peak 60-90 min, 4h duration
+// onsetMin: 10 for abdomen, 15 for arm/buttock
+function apidraActivity(t_h, dose, isAbdomen) {
+  const onset = (isAbdomen ? 10 : 15) / 60;
+  const t = t_h - onset;
+  if (t <= 0 || t_h > 4.5) return 0;
+  const PK = [[0,0],[0.25,0.4],[0.5,0.75],[0.75,1.0],[1.0,0.9],[1.5,0.65],[2.0,0.4],[3.0,0.15],[4.0,0.03],[4.5,0]];
+  return dose * interpolatePK(PK, t);
+}
+
+// Levemir (detemir) profile — onset 1-2h, flat peak 6-8h, duration 16-24h
+function levemirActivity(t_h, dose) {
+  if (t_h > 24) return 0;
+  const PK = [[0,0],[1,0.05],[2,0.2],[4,0.55],[6,0.8],[8,0.92],[10,0.9],[12,0.82],[16,0.6],[20,0.3],[22,0.12],[24,0]];
+  return dose * interpolatePK(PK, t_h);
+}
+
+// Carb absorption profile — two speeds selected by meal fat level (HE units)
+// fast: high-GI / low-fat  →  onset 10 min, peak 30–45 min, done in ~2 h
+// slow: high-fat / protein  →  onset 20 min, peak 1.5 h, done in ~4 h
+function carbAbsorption(t_h, he, isFatty) {
+  if (t_h < 0) return 0;
+  if (isFatty) {
+    if (t_h > 4) return 0;
+    const PK = [[0,0],[0.33,0.2],[0.75,0.55],[1.25,0.88],[1.5,1.0],[2.0,0.82],[2.5,0.58],[3.0,0.3],[3.5,0.1],[4.0,0]];
+    return he * interpolatePK(PK, t_h);
+  } else {
+    if (t_h > 2.5) return 0;
+    const PK = [[0,0],[0.17,0.25],[0.33,0.6],[0.5,0.88],[0.75,1.0],[1.0,0.85],[1.5,0.5],[2.0,0.18],[2.5,0]];
+    return he * interpolatePK(PK, t_h);
+  }
+}
+
+/* ═══════════ MAIN CHART ═══════════════════════════════════════════════ */
+
+function drawChart(data) {
+  const canvas = document.getElementById('main-chart');
+  if (!canvas) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth - 28;
+  const H   = 100;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  // Layout: glucose panel on top, PK activity strip below
+  const PAD = {l:26, r:6, t:5, b:17};
+  const GH  = 54;   // glucose panel height
+  const AH  = 18;   // activity strip height (insulin + food PK curves)
+  const GAP = 4;
+  const GT  = PAD.t;
+  const AT  = GT + GH + GAP;
+  const CW  = W - PAD.l - PAD.r;
+
+  // Day boundaries in device local time
+  const today = todayLocal();
+  const [yr,mo,dy] = today.split('-').map(Number);
+  const dayStartMs = new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime();
+  const dayMs = 24*3600000;
+
+  function xOf(ms)  { return PAD.l + Math.max(0, Math.min(1,(ms-dayStartMs)/dayMs)) * CW; }
+  function xOfH(h)  { return PAD.l + (h/24)*CW; }
+
+  // ── Time grid ─────────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(163,175,200,.16)';
+  ctx.lineWidth = 1;
+  [0,6,12,18,24].forEach(h => {
+    const x = xOfH(h);
+    ctx.beginPath(); ctx.moveTo(x, GT); ctx.lineTo(x, AT+AH); ctx.stroke();
+  });
+
+  // ── Glucose target band (3.9 – 7.8 mmol/L) ───────────────────────────
+  const GMIN=2, GMAX=18;
+  function yGluc(v) { return GT + GH - ((v-GMIN)/(GMAX-GMIN))*GH; }
+  ctx.fillStyle = 'rgba(109,201,154,.12)';
+  ctx.fillRect(PAD.l, yGluc(7.8), CW, yGluc(3.9)-yGluc(7.8));
+  ctx.strokeStyle='rgba(109,201,154,.35)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  [3.9,7.8].forEach(v=>{ ctx.beginPath(); ctx.moveTo(PAD.l,yGluc(v)); ctx.lineTo(PAD.l+CW,yGluc(v)); ctx.stroke(); });
+  ctx.setLineDash([]);
+
+  // ── Compute PK curves at 15-min steps ────────────────────────────────
+  const STEPS = 97; // 0..24h every 15 min
+  const iobA  = new Float32Array(STEPS); // Apidra IOB (bolus)
+  const iobL  = new Float32Array(STEPS); // Levemir IOB (basal)
+  const iobF  = new Float32Array(STEPS); // Carb absorption from food
+
+  (data.insulin||[]).forEach(inj => {
+    const injMs     = new Date(inj.time).getTime();
+    const dose      = parseFloat(inj.units)||0;
+    const isLong    = inj.insulinType === 'long';
+    const isAbdomen = ['sr','sl'].includes(inj.site);
+    for (let s=0; s<STEPS; s++) {
+      const t_h = ((dayStartMs + s*15*60000) - injMs) / 3600000;
+      if (t_h < 0) continue;
+      if (isLong) iobL[s] += levemirActivity(t_h, dose);
+      else        iobA[s] += apidraActivity(t_h, dose, isAbdomen);
+    }
+  });
+
+  (data.food||[]).forEach(meal => {
+    const mealMs = new Date(meal.time).getTime();
+    const he     = parseFloat(meal.he)||0;
+    // Classify meal as fatty if description contains кей hints or he is high
+    // Simple heuristic: >3 HE in one meal tends to be a fuller / more complex meal
+    const isFatty = he >= 3;
+    for (let s=0; s<STEPS; s++) {
+      const t_h = ((dayStartMs + s*15*60000) - mealMs) / 3600000;
+      if (t_h < 0) continue;
+      iobF[s] += carbAbsorption(t_h, he, isFatty);
+    }
+  });
+
+  // ── Activity strip: food absorption (green) + Levemir (purple) + Apidra (blue)
+  // Each series normalized to its own baseline scale so both are readable.
+  const peakA = Math.max(...iobA, 0);
+  const peakL = Math.max(...iobL, 0);
+  const peakF = Math.max(...iobF, 0);
+  const maxI  = Math.max(20, Math.ceil(peakA), Math.ceil(peakL)); // insulin: 20U floor
+  const maxF  = Math.max(4,  Math.ceil(peakF));                   // food: 4 HE floor
+
+  function drawPK(iob, maxV, color) {
+    if (!iob.some(v => v > 0.01)) return;
+    ctx.beginPath();
+    ctx.moveTo(xOfH(0), AT+AH);
+    for (let s=0; s<STEPS; s++) ctx.lineTo(xOfH(s*15/60), AT+AH - (iob[s]/maxV)*AH);
+    ctx.lineTo(xOfH(24), AT+AH); ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+  }
+  // Draw back-to-front: food → Levemir → Apidra
+  drawPK(iobF, maxF, 'rgba(109,201,154,.45)');   // green  — matches food button
+  drawPK(iobL, maxI, 'rgba(167,139,250,.42)');   // purple — Levemir
+  drawPK(iobA, maxI, 'rgba(123,143,255,.52)');   // blue   — matches insulin button
+
+  // ── Glucose line — orange, matches sugar button ───────────────────────
+  const sugarSorted = [...(data.sugar||[])].sort((a,b)=>new Date(a.time)-new Date(b.time));
+  if (sugarSorted.length > 1) {
+    ctx.beginPath();
+    sugarSorted.forEach((s,i) => {
+      const x=xOf(new Date(s.time).getTime()), y=yGluc(parseFloat(s.value));
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle='rgba(245,167,122,.80)'; ctx.lineWidth=2; ctx.stroke(); // --a-orange
+  }
+  // Glucose dots — clinical color coding (red/green/yellow/orange)
+  sugarSorted.forEach(s => {
+    const v=parseFloat(s.value);
+    const x=xOf(new Date(s.time).getTime()), y=yGluc(v);
+    ctx.beginPath(); ctx.arc(x,y,4,0,2*Math.PI);
+    ctx.fillStyle = v<3.9?'#DC2626': v<=7.8?'#22C55E': v<=11?'#F59E0B':'#EF4444';
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5; ctx.stroke();
+    if(sugarSorted.length<=8){
+      ctx.fillStyle='#4A5370'; ctx.font=`9px -apple-system,sans-serif`;
+      ctx.textAlign='center'; ctx.fillText(v.toFixed(1), x, y-(v>GMAX-2?9:-6));
+    }
+  });
+
+  // ── X-axis time labels ────────────────────────────────────────────────
+  ctx.fillStyle='#8E9BB8'; ctx.font=`9px -apple-system,sans-serif`; ctx.textAlign='center';
+  [0,6,12,18,24].forEach(h=>ctx.fillText(pad(h)+':00', xOfH(h), H-4));
+
+  // ── Y-axis glucose labels ─────────────────────────────────────────────
+  ctx.textAlign='right'; ctx.font=`9px -apple-system,sans-serif`;
+  [4,7,10,14].forEach(v=>{
+    ctx.fillStyle = v>=3.9&&v<=7.8?'#6DC99A':'rgba(142,155,184,.6)';
+    ctx.fillText(v, PAD.l-3, yGluc(v)+3);
+  });
+
+  // ── Current time — thin solid accent line ─────────────────────────────
+  const nowMs = Date.now();
+  if(nowMs>=dayStartMs && nowMs<=dayStartMs+dayMs){
+    const xNow=xOf(nowMs);
+    ctx.strokeStyle='rgba(123,143,255,.7)'; ctx.lineWidth=1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(xNow, GT); ctx.lineTo(xNow, AT+AH); ctx.stroke();
+  }
+}
+
+/* ═══════════ INIT ═════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  initMain(); refreshTimeDisplays();
+  setInterval(()=>{
+    refreshTimeDisplays();
+    if(document.getElementById('s-main').classList.contains('active')) initMain();
+  },60000);
+});
+</script>
+</body>
+</html>
