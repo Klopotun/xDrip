@@ -161,34 +161,42 @@ function saveSugar(data) {
   }
 }
 
-// ── API: Summary for a date (YYYY-MM-DD in device local time) ───────────────
-// tzOffsetMinutes = new Date().getTimezoneOffset() from client, e.g. -180 for Moscow.
+// ── API: Summary for a date ──────────────────────────────────────────────────
+// dateStr  : "YYYY-MM-DD" label (used only for the return value / display)
+// startMs  : UTC ms of local-day midnight   (new Date(yr,mo-1,dy,0,0,0,0).getTime())
+// endMs    : UTC ms of local-day 23:59:59   (new Date(yr,mo-1,dy,23,59,59,999).getTime())
+// The client computes these with native Date so no server-side timezone math is needed.
 
-function getSummary(dateStr, tzOffsetMinutes) {
-  var tzOff = (typeof tzOffsetMinutes === 'number') ? tzOffsetMinutes : -180;
+function getSummary(dateStr, startMs, endMs) {
 
-  // Convert a Sheets cell value to UTC ISO string
+  // Convert a Sheets cell value to UTC milliseconds (handles both string and Date cells)
+  function cellMs(v) {
+    if (!v) return NaN;
+    if (v.getTime) return v.getTime();           // Sheets Date object
+    var ms = new Date(String(v)).getTime();       // ISO string
+    return ms;
+  }
+
+  // True if the record's timestamp falls within the requested local day
+  function inDay(v) {
+    var ms = cellMs(v);
+    return !isNaN(ms) && ms >= startMs && ms <= endMs;
+  }
+
+  // Convert cell to ISO string for the frontend
   function toIso(v) {
-    return (v instanceof Date) ? v.toISOString() : String(v);
+    if (!v) return '';
+    if (v.getTime) return new Date(v.getTime()).toISOString();
+    return String(v);
   }
 
-  // Check whether a stored UTC ISO string belongs to dateStr in device local time
-  function belongsToDate(utcIso) {
-    try {
-      var ms = new Date(utcIso).getTime();
-      if (isNaN(ms)) return false;
-      // Subtract tzOffset to go from UTC to local: local = UTC − offset
-      return new Date(ms - tzOff * 60000).toISOString().slice(0, 10) === dateStr;
-    } catch (e2) { return false; }
-  }
-
-  // Read all rows of a sheet that belong to dateStr, applying mapper
+  // Read matching rows from a sheet
   function parseRows(sheet, mapper) {
     var rows = sheet.getDataRange().getValues();
     var result = [];
     for (var i = 1; i < rows.length; i++) {
       if (!rows[i][0]) continue;
-      if (belongsToDate(toIso(rows[i][1]))) result.push(mapper(rows[i]));
+      if (inDay(rows[i][1])) result.push(mapper(rows[i]));
     }
     return result;
   }

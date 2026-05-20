@@ -798,6 +798,14 @@ function inputToUTC(val) {
   const d = new Date(val);
   return isNaN(d) ? new Date().toISOString() : d.toISOString();
 }
+// Return UTC start/end ms for a local day string "YYYY-MM-DD"
+function getDayBounds(localDateStr) {
+  const [yr,mo,dy] = localDateStr.split('-').map(Number);
+  return {
+    start: new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime(),
+    end:   new Date(yr, mo-1, dy, 23, 59, 59, 999).getTime()
+  };
+}
 function getSubmitTime(id) {
   const i=document.getElementById(id+'-tinp');
   if(i && i.style.display!=='none' && i.value) return inputToUTC(i.value);
@@ -859,10 +867,11 @@ function initMain(){
 }
 
 function loadTodayChart(){
-  drawChart({insulin:[],food:[],sugar:[]});           // show grid + time line immediately
+  drawChart({insulin:[],food:[],sugar:[]});
+  const _d=todayLocal(), _b=getDayBounds(_d);
   google.script.run.withSuccessHandler(r=>{
     if(r.ok) drawChart(r);
-  }).withFailureHandler(()=>{}).getSummary(todayLocal(), new Date().getTimezoneOffset());
+  }).withFailureHandler(()=>{}).getSummary(_d, _b.start, _b.end);
 }
 function checkPending(){
   google.script.run.withSuccessHandler(r=>{
@@ -1312,26 +1321,30 @@ function showJEmpty(msg){
 }
 function loadJournal(){
   ['j-loading','j-content','j-empty'].forEach((id,i)=>document.getElementById(id).style.display=i===0?'block':'none');
-  google.script.run.withSuccessHandler(r=>{
-    document.getElementById('j-loading').style.display='none';
-    if(!r||!r.ok){showJEmpty(r&&r.error?r.error:'Ошибка загрузки');return;}
-    S.jData=r;
-    document.getElementById('st-ins').textContent=r.totalInsulin||'0';
-    document.getElementById('st-he').textContent=(r.totalHE||0)%1===0?(r.totalHE||0):(r.totalHE||0).toFixed(1);
-    document.getElementById('st-sug').textContent=r.avgSugar?r.avgSugar.toFixed(1):'—';
-    const all=[
-      ...(r.insulin||[]).map(x=>({...x,cat:'ins'})),
-      ...(r.food||[]).map(x=>({...x,cat:'food'})),
-      ...(r.sugar||[]).map(x=>({...x,cat:'sug'}))
-    ].sort((a,b)=>new Date(a.time)-new Date(b.time));
-    if(!all.length){showJEmpty();return;}
-    document.getElementById('j-content').style.display='block';
-    const tl=document.getElementById('tl'); tl.innerHTML='';
-    all.forEach(item=>tl.appendChild(buildTL(item)));
-  }).withFailureHandler(e=>{
-    document.getElementById('j-loading').style.display='none';
-    showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
-  }).getSummary(S.journDate, new Date().getTimezoneOffset());
+  const _b=getDayBounds(S.journDate);
+  google.script.run
+    .withSuccessHandler(r=>{
+      document.getElementById('j-loading').style.display='none';
+      if(!r||!r.ok){showJEmpty(r&&r.error?r.error:'Ошибка загрузки');return;}
+      S.jData=r;
+      document.getElementById('st-ins').textContent=r.totalInsulin||'0';
+      document.getElementById('st-he').textContent=(r.totalHE||0)%1===0?(r.totalHE||0):(r.totalHE||0).toFixed(1);
+      document.getElementById('st-sug').textContent=r.avgSugar?r.avgSugar.toFixed(1):'—';
+      const all=[
+        ...(r.insulin||[]).map(x=>({...x,cat:'ins'})),
+        ...(r.food||[]).map(x=>({...x,cat:'food'})),
+        ...(r.sugar||[]).map(x=>({...x,cat:'sug'}))
+      ].sort((a,b)=>new Date(a.time)-new Date(b.time));
+      if(!all.length){showJEmpty();return;}
+      document.getElementById('j-content').style.display='block';
+      const tl=document.getElementById('tl'); tl.innerHTML='';
+      all.forEach(item=>tl.appendChild(buildTL(item)));
+    })
+    .withFailureHandler(e=>{
+      document.getElementById('j-loading').style.display='none';
+      showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
+    })
+    .getSummary(S.journDate, _b.start, _b.end);
 }
 const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){
