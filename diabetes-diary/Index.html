@@ -692,7 +692,14 @@ function dMove(y){
   _vel=(_ly-y)/dt; _ly=y; _lt=now;
   S.drumIdx=clamp(_di0+Math.round((_dy0-y)/ITEM_H)); renderDrum(true);
 }
-function dEnd(){ if(!_drag)return; _drag=false; S.drumIdx=clamp(S.drumIdx+Math.round(_vel*100)); renderDrum(false); }
+function dEnd(){
+  if(!_drag) return;
+  _drag=false;
+  // _vel is px/ms — convert to units, cap at ±4 to prevent jumps
+  const momentum = Math.round(Math.max(-4, Math.min(4, _vel * 80 / ITEM_H)));
+  S.drumIdx=clamp(S.drumIdx + momentum);
+  renderDrum(false);
+}
 function attachDrum(){
   const d=document.getElementById('drum');
   d.addEventListener('touchstart', e=>{e.preventDefault();dStart(e.touches[0].clientY);},{passive:false});
