@@ -218,6 +218,92 @@ select.inp {
 }
 .he-pre:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
 
+/* ── Food search ─────────────────────────────────────────────────────── */
+.food-mode-wrap { display:flex; gap:10px; margin-bottom:14px; }
+.food-mode-btn {
+  flex:1; padding:13px 8px; border-radius:16px; border:none; cursor:pointer;
+  font-size:13px; font-weight:700; color:var(--muted); text-align:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: all .2s;
+}
+.food-mode-btn.sel { color:#fff; background:var(--a-green);
+  box-shadow: 4px 4px 12px rgba(109,201,154,.4), -2px -2px 8px rgba(255,255,255,.6); }
+
+.search-row { display:flex; gap:10px; align-items:center; }
+.barcode-btn {
+  width:48px; height:48px; border-radius:14px; border:none; cursor:pointer; font-size:22px;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  transition: box-shadow .13s;
+}
+.barcode-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); }
+
+.search-results { margin-top:10px; display:none; }
+.search-results.open { display:block; }
+.sr-item {
+  padding:11px 14px; border-radius:12px; cursor:pointer; margin-bottom:8px;
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+  transition: box-shadow .13s;
+}
+.sr-item:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); }
+.sr-name  { font-size:14px; font-weight:700; color:var(--text); }
+.sr-macros{ font-size:12px; color:var(--muted); margin-top:2px; }
+.sr-online-btn {
+  width:100%; padding:12px; margin-top:4px; border-radius:12px; border:none; cursor:pointer;
+  font-size:13px; font-weight:600; color:var(--accent);
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+}
+
+.selected-food {
+  display:flex; align-items:center; gap:10px; padding:12px 14px;
+  border-radius:14px; margin-bottom:8px;
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+}
+.sf-name { font-size:13px; font-weight:700; flex:1; color:var(--text); line-height:1.3; }
+.sf-gram { width:68px; text-align:center; padding:8px 6px; border:none; border-radius:10px; font-size:14px; font-weight:700;
+  background:var(--bg); box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl);
+  color:var(--text); outline:none; }
+.sf-he   { font-size:13px; font-weight:800; color:var(--a-green); min-width:40px; text-align:right; }
+.sf-del  { font-size:18px; color:var(--muted); cursor:pointer; padding:4px; }
+
+.total-he-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; border-radius:16px; margin-top:4px;
+  background:linear-gradient(135deg,#84DAAD,#52B881);
+  box-shadow: 4px 4px 12px rgba(82,184,129,.3);
+}
+.the-label { font-size:14px; font-weight:600; color:#fff; opacity:.9; }
+.the-val   { font-size:26px; font-weight:800; color:#fff; }
+
+/* ── Barcode modal ────────────────────────────────────────────────────── */
+.modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500;
+  align-items:flex-end; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal-box {
+  background:var(--bg); border-radius:28px 28px 0 0; padding:24px 20px 40px;
+  width:100%; max-width:500px;
+  box-shadow: 0 -8px 30px rgba(0,0,0,.15);
+}
+.modal-title { font-size:17px; font-weight:700; margin-bottom:16px; text-align:center; }
+.modal-video { width:100%; border-radius:18px; aspect-ratio:4/3; object-fit:cover;
+  box-shadow: inset 4px 4px 10px var(--sd), inset -4px -4px 10px var(--sl); background:#000; }
+.modal-hint  { text-align:center; font-size:13px; color:var(--muted); margin-top:12px; }
+.modal-close {
+  display:block; width:100%; margin-top:16px; padding:14px; border-radius:16px;
+  border:none; cursor:pointer; font-size:15px; font-weight:700; color:var(--muted);
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+}
+.modal-manual-inp { display:flex; gap:10px; margin-top:14px; }
+.modal-manual-inp .inp { flex:1; }
+.modal-manual-inp button {
+  padding:0 18px; border-radius:14px; border:none; cursor:pointer;
+  font-size:14px; font-weight:700; color:#fff;
+  background:linear-gradient(135deg,#9BA8FF,#6B7FEE);
+  box-shadow: 4px 4px 10px rgba(107,127,238,.3);
+}
+
 /* ── Sugar input ─────────────────────────────────────────────────────── */
 .sug-big {
   width:100%; font-size:52px; font-weight:800; text-align:center; border:none;
@@ -449,6 +535,59 @@ select.inp {
     <h1>Приём пищи</h1>
   </div>
 
+  <!-- Mode toggle -->
+  <div class="food-mode-wrap">
+    <button class="food-mode-btn sel" id="fm-search" onclick="setFoodMode('search')">🔍 Поиск продукта</button>
+    <button class="food-mode-btn"     id="fm-manual" onclick="setFoodMode('manual')">🔢 ХЕ вручную</button>
+  </div>
+
+  <!-- ── SEARCH MODE ── -->
+  <div id="food-search-mode">
+    <div class="card">
+      <div class="card-lbl">Найти продукт</div>
+      <div class="search-row">
+        <input type="text" class="inp" id="food-search-inp"
+               placeholder="Гречка, хлеб, молоко…" autocomplete="off"
+               oninput="onFoodSearch(this.value)">
+        <button class="barcode-btn" onclick="openBarcode()" title="Сканировать штрихкод">📷</button>
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+
+    <div class="card" id="selected-card" style="display:none">
+      <div class="card-lbl">Состав приёма пищи</div>
+      <div id="selected-list"></div>
+      <div class="total-he-bar">
+        <div class="the-label">Итого ХЕ</div>
+        <div class="the-val" id="total-he-val">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MANUAL MODE ── -->
+  <div id="food-manual-mode" style="display:none">
+    <div class="card">
+      <div class="card-lbl">Хлебные единицы (ХЕ)</div>
+      <div class="he-ctrl">
+        <button class="he-btn" onclick="heStep(-0.5)">−</button>
+        <div class="he-val" id="he-val">1</div>
+        <button class="he-btn" onclick="heStep(0.5)">+</button>
+      </div>
+      <div class="hint">1 ХЕ ≈ 10–12 г углеводов</div>
+      <div class="he-presets">
+        <button class="he-pre" onclick="heSet(0.5)">½</button>
+        <button class="he-pre" onclick="heSet(1)">1</button>
+        <button class="he-pre" onclick="heSet(1.5)">1½</button>
+        <button class="he-pre" onclick="heSet(2)">2</button>
+        <button class="he-pre" onclick="heSet(2.5)">2½</button>
+        <button class="he-pre" onclick="heSet(3)">3</button>
+        <button class="he-pre" onclick="heSet(4)">4</button>
+        <button class="he-pre" onclick="heSet(5)">5</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Common: sugar before + description + time -->
   <div class="card">
     <div class="card-lbl">Сахар перед едой (ммоль/л)</div>
     <input type="number" class="inp inp-big inp-center" id="food-sug"
@@ -457,28 +596,8 @@ select.inp {
   </div>
 
   <div class="card">
-    <div class="card-lbl">Хлебные единицы (ХЕ)</div>
-    <div class="he-ctrl">
-      <button class="he-btn" onclick="heStep(-0.5)">−</button>
-      <div class="he-val" id="he-val">1</div>
-      <button class="he-btn" onclick="heStep(0.5)">+</button>
-    </div>
-    <div class="hint">1 ХЕ ≈ 10–12 г углеводов</div>
-    <div class="he-presets">
-      <button class="he-pre" onclick="heSet(0.5)">½</button>
-      <button class="he-pre" onclick="heSet(1)">1</button>
-      <button class="he-pre" onclick="heSet(1.5)">1½</button>
-      <button class="he-pre" onclick="heSet(2)">2</button>
-      <button class="he-pre" onclick="heSet(2.5)">2½</button>
-      <button class="he-pre" onclick="heSet(3)">3</button>
-      <button class="he-pre" onclick="heSet(4)">4</button>
-      <button class="he-pre" onclick="heSet(5)">5</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-lbl">Что ели</div>
-    <textarea class="inp" id="food-desc" placeholder="Каша, хлеб, суп…"></textarea>
+    <div class="card-lbl">Заметки</div>
+    <textarea class="inp" id="food-desc" placeholder="Завтрак, обед, перекус…"></textarea>
   </div>
 
   <div class="card">
@@ -491,6 +610,20 @@ select.inp {
   </div>
 
   <button class="submit sub-green" id="food-submit" onclick="submitFood()">Сохранить приём пищи</button>
+</div>
+
+<!-- Barcode modal -->
+<div class="modal-overlay" id="barcode-modal">
+  <div class="modal-box">
+    <div class="modal-title">📷 Сканирование штрихкода</div>
+    <video class="modal-video" id="barcode-video" autoplay muted playsinline></video>
+    <div class="modal-hint" id="barcode-hint">Наведите камеру на штрихкод упаковки</div>
+    <div class="modal-manual-inp">
+      <input type="number" class="inp" id="barcode-manual-inp" placeholder="Введите штрихкод вручную" inputmode="numeric">
+      <button onclick="lookupBarcode(document.getElementById('barcode-manual-inp').value)">→</button>
+    </div>
+    <button class="modal-close" onclick="closeBarcode()">Закрыть</button>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════ SUGAR ══════════════════════════════════ -->
@@ -770,26 +903,215 @@ function submitIns(){
 }
 
 /* ═══════════ FOOD ═════════════════════════════════════════════════════ */
+// selected foods: [{name, carbs, fat, protein, grams}]
+let selectedFoods = [];
+let foodSearchTimer = null;
+let foodMode = 'search'; // 'search' | 'manual'
+
 function initFood(){
-  S.he=1; S.timeCustom.food=false;
-  updHE(); document.getElementById('food-sug').value='';
+  S.he=1; S.timeCustom.food=false; selectedFoods=[];
+  updHE(); updSelectedFoods();
+  document.getElementById('food-sug').value='';
   document.getElementById('food-desc').value='';
   document.getElementById('food-tinp').style.display='none';
+  document.getElementById('food-search-inp').value='';
+  document.getElementById('search-results').innerHTML='';
+  document.getElementById('search-results').classList.remove('open');
+  setFoodMode(foodMode);
   refreshTimeDisplays();
 }
+
+function setFoodMode(mode){
+  foodMode=mode;
+  document.getElementById('fm-search').classList.toggle('sel', mode==='search');
+  document.getElementById('fm-manual').classList.toggle('sel', mode==='manual');
+  document.getElementById('food-search-mode').style.display = mode==='search'?'block':'none';
+  document.getElementById('food-manual-mode').style.display = mode==='manual'?'block':'none';
+}
+
 function heStep(d){ S.he=Math.max(0,Math.round((S.he+d)*2)/2); updHE(); }
 function heSet(v){ S.he=v; updHE(); }
 function updHE(){ document.getElementById('he-val').textContent=S.he%1===0?S.he:S.he.toFixed(1); }
+
+// ── Food search ─────────────────────────────────────────────────────────────
+
+function onFoodSearch(query){
+  clearTimeout(foodSearchTimer);
+  const box=document.getElementById('search-results');
+  if(!query.trim()){box.innerHTML='';box.classList.remove('open');return;}
+  foodSearchTimer=setTimeout(()=>{
+    google.script.run.withSuccessHandler(r=>{
+      if(!r.ok){toast('❌ '+r.error);return;}
+      renderSearchResults(r.results, query, false);
+    }).withFailureHandler(()=>{}).searchFoods(query);
+  }, 300);
+}
+
+function renderSearchResults(results, query, fromOnline){
+  const box=document.getElementById('search-results');
+  box.innerHTML='';
+  box.classList.add('open');
+
+  if(results.length===0 && fromOnline){
+    box.innerHTML='<div style="text-align:center;color:var(--muted);padding:12px;font-size:13px">Ничего не найдено</div>';
+    return;
+  }
+
+  results.forEach(f=>{
+    const el=document.createElement('div');
+    el.className='sr-item';
+    const he=(f.carbs/12).toFixed(1);
+    el.innerHTML=`<div class="sr-name">${f.name}</div>
+      <div class="sr-macros">У: ${f.carbs}г · Ж: ${f.fat}г · Б: ${f.protein}г · ${f.kcal||Math.round(f.carbs*4+f.fat*9+f.protein*4)} ккал · <strong style="color:var(--a-green)">${he} ХЕ/100г</strong></div>`;
+    el.onclick=()=>addFood(f);
+    box.appendChild(el);
+  });
+
+  if(!fromOnline){
+    const onlineBtn=document.createElement('button');
+    onlineBtn.className='sr-online-btn';
+    onlineBtn.textContent='🌐 Искать онлайн (Open Food Facts)';
+    onlineBtn.onclick=()=>{
+      onlineBtn.textContent='Ищем…'; onlineBtn.disabled=true;
+      google.script.run.withSuccessHandler(r=>{
+        if(r.ok) renderSearchResults(r.results, query, true);
+        else toast('❌ Ошибка онлайн-поиска');
+      }).withFailureHandler(()=>toast('❌ Ошибка')).searchFoodsOnline(query);
+    };
+    box.appendChild(onlineBtn);
+  }
+}
+
+function addFood(food){
+  selectedFoods.push({...food, grams:100});
+  updSelectedFoods();
+  document.getElementById('food-search-inp').value='';
+  document.getElementById('search-results').innerHTML='';
+  document.getElementById('search-results').classList.remove('open');
+}
+
+function updSelectedFoods(){
+  const list=document.getElementById('selected-list');
+  const card=document.getElementById('selected-card');
+  if(!selectedFoods.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  list.innerHTML='';
+  let totalHE=0;
+  selectedFoods.forEach((f,i)=>{
+    const he=+(f.carbs*f.grams/100/12).toFixed(2);
+    totalHE+=he;
+    const el=document.createElement('div');
+    el.className='selected-food';
+    el.innerHTML=`
+      <div class="sf-name">${f.name}</div>
+      <input class="sf-gram" type="number" value="${f.grams}" min="1" max="2000"
+             oninput="updateGrams(${i},this.value)" inputmode="numeric">
+      <div class="sf-he" id="sfhe-${i}">${he%1===0?he:he.toFixed(1)}<small style="font-weight:500;font-size:10px"> ХЕ</small></div>
+      <div class="sf-del" onclick="removeFood(${i})">✕</div>`;
+    list.appendChild(el);
+  });
+  document.getElementById('total-he-val').textContent=
+    totalHE%1===0 ? totalHE : totalHE.toFixed(1);
+}
+
+function updateGrams(i,val){
+  selectedFoods[i].grams=Math.max(1,parseInt(val)||100);
+  // Update just the HE label without re-rendering entire list
+  const f=selectedFoods[i];
+  const he=+(f.carbs*f.grams/100/12).toFixed(2);
+  const el=document.getElementById('sfhe-'+i);
+  if(el) el.innerHTML=(he%1===0?he:he.toFixed(1))+'<small style="font-weight:500;font-size:10px"> ХЕ</small>';
+  // Recompute total
+  const total=selectedFoods.reduce((s,x)=>s+x.carbs*x.grams/100/12, 0);
+  document.getElementById('total-he-val').textContent=
+    total%1===0?total:total.toFixed(1);
+}
+
+function removeFood(i){
+  selectedFoods.splice(i,1);
+  updSelectedFoods();
+}
+
+function getTotalHE(){
+  if(foodMode==='search'){
+    if(!selectedFoods.length) return S.he;
+    return +selectedFoods.reduce((s,f)=>s+f.carbs*f.grams/100/12, 0).toFixed(2);
+  }
+  return S.he;
+}
+
+function getFoodDescription(){
+  if(foodMode==='search' && selectedFoods.length){
+    return selectedFoods.map(f=>`${f.name} ${f.grams}г`).join(', ');
+  }
+  return document.getElementById('food-desc').value;
+}
+
+// ── Barcode scanner ─────────────────────────────────────────────────────────
+
+let barcodeStream=null, barcodeDetector=null, barcodeTimer=null;
+
+function openBarcode(){
+  document.getElementById('barcode-modal').classList.add('open');
+  document.getElementById('barcode-hint').textContent='Наведите камеру на штрихкод';
+  document.getElementById('barcode-manual-inp').value='';
+
+  if(!('BarcodeDetector' in window)){
+    document.getElementById('barcode-hint').textContent='Сканер недоступен в вашем браузере — введите штрихкод вручную';
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:1280}})
+    .then(stream=>{
+      barcodeStream=stream;
+      const video=document.getElementById('barcode-video');
+      video.srcObject=stream;
+      barcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e']});
+      barcodeTimer=setInterval(async()=>{
+        try{
+          const codes=await barcodeDetector.detect(video);
+          if(codes.length){ lookupBarcode(codes[0].rawValue); }
+        }catch(e){}
+      }, 600);
+    })
+    .catch(()=>{
+      document.getElementById('barcode-hint').textContent='Нет доступа к камере — введите штрихкод вручную';
+    });
+}
+
+function closeBarcode(){
+  clearInterval(barcodeTimer);
+  if(barcodeStream) barcodeStream.getTracks().forEach(t=>t.stop());
+  barcodeStream=null;
+  document.getElementById('barcode-modal').classList.remove('open');
+  document.getElementById('barcode-video').srcObject=null;
+}
+
+function lookupBarcode(barcode){
+  if(!barcode) return;
+  closeBarcode();
+  toast('🔍 Ищем штрихкод '+barcode+'…');
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok && r.food){ addFood(r.food); toast('✅ '+r.food.name+' добавлен'); }
+    else toast('❌ Продукт не найден в базе Open Food Facts');
+  }).withFailureHandler(()=>toast('❌ Ошибка запроса')).getFoodByBarcode(barcode);
+}
+
 function submitFood(){
+  const he=getTotalHE();
+  if(foodMode==='search' && !selectedFoods.length && he===0){
+    toast('⚠️ Добавьте хотя бы один продукт'); return;
+  }
   const btn=document.getElementById('food-submit');
   btn.disabled=true; btn.textContent='Сохранение…';
   google.script.run.withSuccessHandler(r=>{
     btn.disabled=false; btn.textContent='Сохранить приём пищи';
-    if(r.ok){toast('✅ Приём пищи сохранён');setTimeout(()=>go('s-main'),700);}
-    else toast('❌ '+r.error);
+    if(r.ok){
+      selectedFoods=[];
+      toast('✅ Приём пищи сохранён'); setTimeout(()=>go('s-main'),700);
+    } else toast('❌ '+r.error);
   }).withFailureHandler(()=>{btn.disabled=false;btn.textContent='Сохранить приём пищи';toast('❌ Ошибка');})
-  .saveFood({time:getSubmitTime('food'),he:S.he,
-    description:document.getElementById('food-desc').value,
+  .saveFood({time:getSubmitTime('food'), he, description:getFoodDescription(),
     sugarBefore:document.getElementById('food-sug').value});
 }
 
