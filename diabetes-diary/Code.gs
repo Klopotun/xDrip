@@ -78,7 +78,7 @@ function getLastInsulinInfo() {
 
 function resetNeedle() {
   try { setSetting('needleCount', 0); return { ok: true }; }
-  catch(e) { return { ok: false, error: e.message }; }
+  catch(e) { return { ok: false, error: String(e) }; }
 }
 
 // ── API: Save insulin ────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ function saveInsulin(data) {
 
     return { ok: true, id: id };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -127,7 +127,7 @@ function saveFood(data) {
     ]);
     return { ok: true, id: id };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -157,65 +157,72 @@ function saveSugar(data) {
 
     return { ok: true, id: id };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
-// ── API: Summary for a date (YYYY-MM-DD in UTC+3) ───────────────────────────
+// ── API: Summary for a date (YYYY-MM-DD in device local time) ───────────────
+// tzOffsetMinutes = new Date().getTimezoneOffset() from client, e.g. -180 for Moscow.
 
-// tzOffsetMinutes: value of new Date().getTimezoneOffset() on the client device
-// e.g. -180 for Moscow (UTC+3). Defaults to -180 if omitted for backwards compat.
 function getSummary(dateStr, tzOffsetMinutes) {
+  var tzOff = (typeof tzOffsetMinutes === 'number') ? tzOffsetMinutes : -180;
+
+  // Convert a Sheets cell value to UTC ISO string
+  function toIso(v) {
+    return (v instanceof Date) ? v.toISOString() : String(v);
+  }
+
+  // Check whether a stored UTC ISO string belongs to dateStr in device local time
+  function belongsToDate(utcIso) {
+    try {
+      var ms = new Date(utcIso).getTime();
+      if (isNaN(ms)) return false;
+      // Subtract tzOffset to go from UTC to local: local = UTC − offset
+      return new Date(ms - tzOff * 60000).toISOString().slice(0, 10) === dateStr;
+    } catch (e2) { return false; }
+  }
+
+  // Read all rows of a sheet that belong to dateStr, applying mapper
+  function parseRows(sheet, mapper) {
+    var rows = sheet.getDataRange().getValues();
+    var result = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (!rows[i][0]) continue;
+      if (belongsToDate(toIso(rows[i][1]))) result.push(mapper(rows[i]));
+    }
+    return result;
+  }
+
   try {
-    const tzOff = (typeof tzOffsetMinutes === 'number') ? tzOffsetMinutes : -180;
-    function belongsToDate(utcIso) {
-      try {
-        const ms = new Date(utcIso).getTime();
-        if (isNaN(ms)) return false;
-        // Shift UTC ms to local time ms: local = UTC − tzOffset*60000
-        const d = new Date(ms - tzOff * 60000);
-        return d.toISOString().slice(0, 10) === dateStr;
-      } catch(e2) { return false; }
-    }
+    var insulin = parseRows(getSheet('Инсулин'), function(r) {
+      return { id: String(r[0]), time: toIso(r[1]), insulinType: r[2],
+               insulinName: r[3], units: r[4], site: r[5], notes: r[6] };
+    });
+    var food = parseRows(getSheet('Еда'), function(r) {
+      return { id: String(r[0]), time: toIso(r[1]), he: r[2],
+               description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5]) };
+    });
+    var sugar = parseRows(getSheet('Сахар'), function(r) {
+      return { id: String(r[0]), time: toIso(r[1]), value: r[2],
+               sugarType: r[3], foodId: String(r[4]) };
+    });
 
-    function parseRows(sheet, mapper) {
-      const rows = sheet.getDataRange().getValues();
-      const result = [];
-      for (let i = 1; i < rows.length; i++) {
-        if (!rows[i][0]) continue;
-        const iso = rows[i][1] instanceof Date ? rows[i][1].toISOString() : String(rows[i][1]);
-        if (belongsToDate(iso)) result.push(mapper(rows[i]));
-      }
-      return result;
-    }
+    var totalInsulin = insulin.reduce(function(s,r){ return s+(Number(r.units)||0); }, 0);
+    var totalLong    = insulin.filter(function(r){ return r.insulinType==='long'; })
+                              .reduce(function(s,r){ return s+(Number(r.units)||0); }, 0);
+    var totalShort   = insulin.filter(function(r){ return r.insulinType!=='long'; })
+                              .reduce(function(s,r){ return s+(Number(r.units)||0); }, 0);
+    var totalHE      = food.reduce(function(s,r){ return s+(Number(r.he)||0); }, 0);
+    var sugarVals    = sugar.map(function(r){ return Number(r.value); }).filter(Boolean);
+    var avgSugar     = sugarVals.length
+                       ? sugarVals.reduce(function(a,b){ return a+b; }, 0) / sugarVals.length
+                       : null;
 
-    function toIso(v) { return v instanceof Date ? v.toISOString() : String(v); }
-
-    const insulin = parseRows(getSheet('Инсулин'), r => ({
-      id: String(r[0]), time: toIso(r[1]), insulinType: r[2],
-      insulinName: r[3], units: r[4], site: r[5], notes: r[6]
-    }));
-
-    const food = parseRows(getSheet('Еда'), r => ({
-      id: String(r[0]), time: toIso(r[1]), he: r[2],
-      description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5])
-    }));
-
-    const sugar = parseRows(getSheet('Сахар'), r => ({
-      id: String(r[0]), time: toIso(r[1]), value: r[2],
-      sugarType: r[3], foodId: String(r[4])
-    }));
-
-    const totalInsulin  = insulin.reduce((s, r) => s + (Number(r.units) || 0), 0);
-    const totalLong     = insulin.filter(r => r.insulinType === 'long').reduce((s, r) => s + (Number(r.units) || 0), 0);
-    const totalShort    = insulin.filter(r => r.insulinType !== 'long').reduce((s, r) => s + (Number(r.units) || 0), 0);
-    const totalHE       = food.reduce((s, r) => s + (Number(r.he) || 0), 0);
-    const sugarValues   = sugar.map(r => Number(r.value)).filter(Boolean);
-    const avgSugar      = sugarValues.length ? (sugarValues.reduce((a, b) => a + b, 0) / sugarValues.length) : null;
-
-    return { ok: true, insulin, food, sugar, totalInsulin, totalLong, totalShort, totalHE, avgSugar };
+    return { ok: true, insulin: insulin, food: food, sugar: sugar,
+             totalInsulin: totalInsulin, totalLong: totalLong, totalShort: totalShort,
+             totalHE: totalHE, avgSugar: avgSugar };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -251,7 +258,7 @@ function updateRecord(type, id, patch) {
     }
     return { ok: false, error: 'Запись не найдена' };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -270,7 +277,7 @@ function deleteRecord(type, id) {
     }
     return { ok: false, error: 'Запись не найдена' };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -480,7 +487,7 @@ function searchFoods(query) {
     }
     return { ok: true, results };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -502,7 +509,7 @@ function getFoodByBarcode(barcode) {
       kcal:    +(n['energy-kcal_100g']   || 0).toFixed(0)
     }};
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
@@ -529,7 +536,7 @@ function searchFoodsOnline(query) {
       }));
     return { ok: true, results };
   } catch(e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: String(e) };
   }
 }
 
