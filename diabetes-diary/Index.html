@@ -1257,26 +1257,34 @@ function navDate(delta){
   S.journDate=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   renderDateLabel(); loadJournal();
 }
+function showJEmpty(msg){
+  const el=document.getElementById('j-empty');
+  el.innerHTML=(msg?'<div style="color:var(--a-red);font-size:13px;margin-bottom:8px">⚠️ '+msg+'</div>':'')
+    +'<div class="empty-ico">📋</div>За этот день нет записей';
+  el.style.display='block';
+}
 function loadJournal(){
   ['j-loading','j-content','j-empty'].forEach((id,i)=>document.getElementById(id).style.display=i===0?'block':'none');
   google.script.run.withSuccessHandler(r=>{
     document.getElementById('j-loading').style.display='none';
-    if(!r.ok){toast('❌ '+r.error);return;}
+    if(!r||!r.ok){showJEmpty(r&&r.error?r.error:'Ошибка загрузки');return;}
     S.jData=r;
     document.getElementById('st-ins').textContent=r.totalInsulin||'0';
-    document.getElementById('st-he').textContent=r.totalHE%1===0?r.totalHE:r.totalHE.toFixed(1);
+    document.getElementById('st-he').textContent=(r.totalHE||0)%1===0?(r.totalHE||0):(r.totalHE||0).toFixed(1);
     document.getElementById('st-sug').textContent=r.avgSugar?r.avgSugar.toFixed(1):'—';
     const all=[
-      ...r.insulin.map(x=>({...x,cat:'ins'})),
-      ...r.food.map(x=>({...x,cat:'food'})),
-      ...r.sugar.map(x=>({...x,cat:'sug'}))
+      ...(r.insulin||[]).map(x=>({...x,cat:'ins'})),
+      ...(r.food||[]).map(x=>({...x,cat:'food'})),
+      ...(r.sugar||[]).map(x=>({...x,cat:'sug'}))
     ].sort((a,b)=>new Date(a.time)-new Date(b.time));
-    if(!all.length){document.getElementById('j-empty').style.display='block';return;}
+    if(!all.length){showJEmpty();return;}
     document.getElementById('j-content').style.display='block';
     const tl=document.getElementById('tl'); tl.innerHTML='';
     all.forEach(item=>tl.appendChild(buildTL(item)));
-  }).withFailureHandler(()=>{document.getElementById('j-loading').style.display='none';toast('❌ Ошибка загрузки');})
-  .getSummary(S.journDate);
+  }).withFailureHandler(e=>{
+    document.getElementById('j-loading').style.display='none';
+    showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
+  }).getSummary(S.journDate);
 }
 const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){

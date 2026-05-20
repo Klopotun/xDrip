@@ -166,9 +166,12 @@ function saveSugar(data) {
 function getSummary(dateStr) {
   try {
     function belongsToDate(utcIso) {
-      // Convert UTC → UTC+3 and check date
-      const d = new Date(new Date(utcIso).getTime() + 3 * 3600000);
-      return d.toISOString().slice(0, 10) === dateStr;
+      try {
+        const ms = new Date(utcIso).getTime();
+        if (isNaN(ms)) return false;
+        const d = new Date(ms + 3 * 3600000);
+        return d.toISOString().slice(0, 10) === dateStr;
+      } catch(e2) { return false; }
     }
 
     function parseRows(sheet, mapper) {
@@ -176,24 +179,26 @@ function getSummary(dateStr) {
       const result = [];
       for (let i = 1; i < rows.length; i++) {
         if (!rows[i][0]) continue;
-        const iso = String(rows[i][1]);
+        const iso = rows[i][1] instanceof Date ? rows[i][1].toISOString() : String(rows[i][1]);
         if (belongsToDate(iso)) result.push(mapper(rows[i]));
       }
       return result;
     }
 
+    function toIso(v) { return v instanceof Date ? v.toISOString() : String(v); }
+
     const insulin = parseRows(getSheet('Инсулин'), r => ({
-      id: String(r[0]), time: String(r[1]), insulinType: r[2],
+      id: String(r[0]), time: toIso(r[1]), insulinType: r[2],
       insulinName: r[3], units: r[4], site: r[5], notes: r[6]
     }));
 
     const food = parseRows(getSheet('Еда'), r => ({
-      id: String(r[0]), time: String(r[1]), he: r[2],
+      id: String(r[0]), time: toIso(r[1]), he: r[2],
       description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5])
     }));
 
     const sugar = parseRows(getSheet('Сахар'), r => ({
-      id: String(r[0]), time: String(r[1]), value: r[2],
+      id: String(r[0]), time: toIso(r[1]), value: r[2],
       sugarType: r[3], foodId: String(r[4])
     }));
 
@@ -539,11 +544,13 @@ function getPendingSugars() {
     for (let i = 1; i < foodRows.length; i++) {
       const r = foodRows[i];
       if (!r[0]) continue;
-      const mealTime = new Date(r[1]).getTime();
+      const iso = r[1] instanceof Date ? r[1].toISOString() : String(r[1]);
+      const mealTime = new Date(iso).getTime();
+      if (isNaN(mealTime)) continue;
       const elapsed  = now - mealTime;
       // Meal was 2–4 hours ago and has no after-meal sugar linked
       if (elapsed >= twoHoursMs && elapsed <= threeHoursMs * 1.5 && !r[5]) {
-        pending.push({ id: String(r[0]), time: String(r[1]), he: r[2], description: r[3] });
+        pending.push({ id: String(r[0]), time: iso, he: r[2], description: r[3] });
       }
     }
     return { ok: true, pending };
