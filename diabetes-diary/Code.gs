@@ -161,74 +161,75 @@ function saveSugar(data) {
   }
 }
 
+// ── Helpers for getSummary (top-level to avoid GAS V8 closure issues) ────────
+
+function _msFromCell(v) {
+  if (!v) return NaN;
+  var iso = (v instanceof Date) ? v.toISOString() : String(v);
+  return new Date(iso).getTime();
+}
+
+function _isoFromCell(v) {
+  if (!v) return '';
+  return (v instanceof Date) ? v.toISOString() : String(v);
+}
+
 // ── API: Summary for a date ──────────────────────────────────────────────────
-// dateStr  : "YYYY-MM-DD" label (used only for the return value / display)
-// startMs  : UTC ms of local-day midnight   (new Date(yr,mo-1,dy,0,0,0,0).getTime())
-// endMs    : UTC ms of local-day 23:59:59   (new Date(yr,mo-1,dy,23,59,59,999).getTime())
-// The client computes these with native Date so no server-side timezone math is needed.
+// startMs / endMs: UTC ms boundaries of the local day, computed by the client.
 
 function getSummary(dateStr, startMs, endMs) {
-
-  // Convert a Sheets cell value to UTC milliseconds (handles both string and Date cells)
-  function cellMs(v) {
-    if (!v) return NaN;
-    if (v.getTime) return v.getTime();           // Sheets Date object
-    var ms = new Date(String(v)).getTime();       // ISO string
-    return ms;
-  }
-
-  // True if the record's timestamp falls within the requested local day
-  function inDay(v) {
-    var ms = cellMs(v);
-    return !isNaN(ms) && ms >= startMs && ms <= endMs;
-  }
-
-  // Convert cell to ISO string for the frontend
-  function toIso(v) {
-    if (!v) return '';
-    if (v.getTime) return new Date(v.getTime()).toISOString();
-    return String(v);
-  }
-
-  // Read matching rows from a sheet
-  function parseRows(sheet, mapper) {
-    var rows = sheet.getDataRange().getValues();
-    var result = [];
-    for (var i = 1; i < rows.length; i++) {
-      if (!rows[i][0]) continue;
-      if (inDay(rows[i][1])) result.push(mapper(rows[i]));
-    }
-    return result;
-  }
-
   try {
-    var insulin = parseRows(getSheet('Инсулин'), function(r) {
-      return { id: String(r[0]), time: toIso(r[1]), insulinType: r[2],
-               insulinName: r[3], units: r[4], site: r[5], notes: r[6] };
-    });
-    var food = parseRows(getSheet('Еда'), function(r) {
-      return { id: String(r[0]), time: toIso(r[1]), he: r[2],
-               description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5]) };
-    });
-    var sugar = parseRows(getSheet('Сахар'), function(r) {
-      return { id: String(r[0]), time: toIso(r[1]), value: r[2],
-               sugarType: r[3], foodId: String(r[4]) };
-    });
+    var sMs = Number(startMs), eMs = Number(endMs);
 
-    var totalInsulin = insulin.reduce(function(s,r){ return s+(Number(r.units)||0); }, 0);
-    var totalLong    = insulin.filter(function(r){ return r.insulinType==='long'; })
-                              .reduce(function(s,r){ return s+(Number(r.units)||0); }, 0);
-    var totalShort   = insulin.filter(function(r){ return r.insulinType!=='long'; })
-                              .reduce(function(s,r){ return s+(Number(r.units)||0); }, 0);
-    var totalHE      = food.reduce(function(s,r){ return s+(Number(r.he)||0); }, 0);
-    var sugarVals    = sugar.map(function(r){ return Number(r.value); }).filter(Boolean);
-    var avgSugar     = sugarVals.length
-                       ? sugarVals.reduce(function(a,b){ return a+b; }, 0) / sugarVals.length
-                       : null;
+    var insulin = [], food = [], sugar = [];
+    var i, r, ms;
+
+    var insulinRows = getSheet('Инсулин').getDataRange().getValues();
+    for (i = 1; i < insulinRows.length; i++) {
+      r = insulinRows[i];
+      if (!r[0]) continue;
+      ms = _msFromCell(r[1]);
+      if (isNaN(ms) || ms < sMs || ms > eMs) continue;
+      insulin.push({ id: String(r[0]), time: _isoFromCell(r[1]),
+        insulinType: r[2], insulinName: r[3], units: r[4], site: r[5], notes: r[6] });
+    }
+
+    var foodRows = getSheet('Еда').getDataRange().getValues();
+    for (i = 1; i < foodRows.length; i++) {
+      r = foodRows[i];
+      if (!r[0]) continue;
+      ms = _msFromCell(r[1]);
+      if (isNaN(ms) || ms < sMs || ms > eMs) continue;
+      food.push({ id: String(r[0]), time: _isoFromCell(r[1]),
+        he: r[2], description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5]) });
+    }
+
+    var sugarRows = getSheet('Сахар').getDataRange().getValues();
+    for (i = 1; i < sugarRows.length; i++) {
+      r = sugarRows[i];
+      if (!r[0]) continue;
+      ms = _msFromCell(r[1]);
+      if (isNaN(ms) || ms < sMs || ms > eMs) continue;
+      sugar.push({ id: String(r[0]), time: _isoFromCell(r[1]),
+        value: r[2], sugarType: r[3], foodId: String(r[4]) });
+    }
+
+    var totalInsulin = 0, totalLong = 0, totalShort = 0, totalHE = 0;
+    for (i = 0; i < insulin.length; i++) {
+      var u = Number(insulin[i].units) || 0;
+      totalInsulin += u;
+      if (insulin[i].insulinType === 'long') totalLong += u; else totalShort += u;
+    }
+    for (i = 0; i < food.length; i++) totalHE += Number(food[i].he) || 0;
+    var sugarSum = 0, sugarCnt = 0;
+    for (i = 0; i < sugar.length; i++) {
+      var sv = Number(sugar[i].value);
+      if (sv) { sugarSum += sv; sugarCnt++; }
+    }
 
     return { ok: true, insulin: insulin, food: food, sugar: sugar,
-             totalInsulin: totalInsulin, totalLong: totalLong, totalShort: totalShort,
-             totalHE: totalHE, avgSugar: avgSugar };
+      totalInsulin: totalInsulin, totalLong: totalLong, totalShort: totalShort,
+      totalHE: totalHE, avgSugar: sugarCnt ? sugarSum / sugarCnt : null };
   } catch(e) {
     return { ok: false, error: String(e) };
   }

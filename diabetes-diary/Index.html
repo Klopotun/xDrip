@@ -1325,7 +1325,7 @@ function loadJournal(){
   google.script.run
     .withSuccessHandler(r=>{
       document.getElementById('j-loading').style.display='none';
-      if(!r||!r.ok){showJEmpty(r&&r.error?r.error:'Ошибка загрузки');return;}
+      if(!r||!r.ok){showJEmpty(r ? (r.error||'ok=false без деталей') : 'Нет ответа от сервера');return;}
       S.jData=r;
       document.getElementById('st-ins').textContent=r.totalInsulin||'0';
       document.getElementById('st-he').textContent=(r.totalHE||0)%1===0?(r.totalHE||0):(r.totalHE||0).toFixed(1);
