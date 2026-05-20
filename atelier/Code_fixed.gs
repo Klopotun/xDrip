@@ -19,8 +19,8 @@ const SHEET_NAMES = {
 
 const HEADERS = {
   _employees:   ['id','name','surname','phone','password','tailor_type','rate','is_active','is_admin','created_at'],
-  _batches:     ['id','tailor_id','product','size','qty_total','qty_delivered','price','order_type','order_coeff','week','note','is_position','created_at'],
-  _deliveries:  ['id','batch_id','tailor_id','qty','total','week','order_coeff','created_at'],
+  _batches:     ['id','tailor_id','product','size','qty_total','qty_delivered','price','order_type','order_coeff','week','note','is_position','due_date','created_at'],
+  _deliveries:  ['id','batch_id','tailor_id','qty','total','week','order_coeff','is_defect','created_at'],
   _day_logs:    ['id','tailor_id','days','deductions','week','created_at'],
   _payments:    ['id','tailor_id','amount','note','week','date','created_at'],
   _products:    ['id','name','price','is_active','created_at'],
@@ -94,9 +94,21 @@ function dispatch(req) {
       delRow('_deliveries', req.id);
       updRow('_batches', req.batchId, {qty_delivered: req.newQtyDelivered});
     });
+    case 'updDelivery':    return withLock(()=>updRow('_deliveries', req.id, req.updates));
+    case 'splitBatch':     return withLock(()=>{
+      // Reduce original batch qty_total and create new batch for recipient
+      var batchRows = getRows('_batches');
+      var origBatch = null;
+      for(var i=0;i<batchRows.length;i++){if(String(batchRows[i].id)===String(req.origBatchId)){origBatch=batchRows[i];break;}}
+      if(!origBatch) throw new Error('Пачка не найдена');
+      var newOrigQtyTotal = Number(origBatch.qty_total||0) - Number(req.transferQty||0);
+      if(newOrigQtyTotal < Number(origBatch.qty_delivered||0)) throw new Error('Нельзя: уже сдано больше чем передаётся');
+      updRow('_batches', req.origBatchId, {qty_total: newOrigQtyTotal});
+      addRow('_batches', req.newBatch);
+      return {ok:true};
+    });
     case 'returnDelivery': return withLock(()=>{
-      // Partially or fully return items from a delivery back to batch
-      // req: { delivId, batchId, returnQty, isDefect }
+      // req: { delivId, batchId, returnQty, isDefect, logId, tailorId, defectDelivId }
       var delivRows = getRows('_deliveries');
       var deliv = null;
       for(var i=0;i<delivRows.length;i++){if(String(delivRows[i].id)===String(req.delivId)){deliv=delivRows[i];break;}}
@@ -108,25 +120,35 @@ function dispatch(req) {
       var batch = null;
       for(var j=0;j<batchRows.length;j++){if(String(batchRows[j].id)===String(req.batchId)){batch=batchRows[j];break;}}
       if(!batch) throw new Error('Пачка не найдена');
-      var newQtyDelivered = Math.max(0, Number(batch.qty_delivered||0) - returnQty);
-      if(returnQty===origQty){
-        delRow('_deliveries', req.delivId);
-      } else {
-        var newQty = origQty - returnQty;
-        var newTotal = Math.round(Number(deliv.total||0) * newQty / origQty);
-        updRow('_deliveries', req.delivId, {qty: newQty, total: newTotal});
-      }
-      var batchUpdates = {qty_delivered: newQtyDelivered};
       if(req.isDefect){
-        // Write off defective items from batch total so tailor doesn't redo them
-        var newQtyTotal = Math.max(newQtyDelivered, Number(batch.qty_total||0) - returnQty);
-        batchUpdates.qty_total = newQtyTotal;
-      }
-      updRow('_batches', req.batchId, batchUpdates);
-      if(req.isDefect){
+        // Defect: keep items on tailor's record as separate "defect" delivery at corrected price
+        // Reduce original delivery (if partial), create new is_defect delivery
+        var pricePerItem = origQty>0 ? Math.round(Number(deliv.total||0)/origQty) : 0;
+        var defectTotal = returnQty * pricePerItem;
+        if(returnQty===origQty){
+          delRow('_deliveries', req.delivId);
+        } else {
+          var remQty = origQty - returnQty;
+          var remTotal = Math.round(Number(deliv.total||0)*remQty/origQty);
+          updRow('_deliveries', req.delivId, {qty:remQty, total:remTotal});
+        }
+        // Create defect delivery (batch.qty_delivered stays the same)
+        addRow('_deliveries',{id:req.defectDelivId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,total:defectTotal,week:deliv.week||batch.week||'',order_coeff:deliv.order_coeff||1,is_defect:'TRUE',created_at:new Date().toISOString()});
         addRow('_defect_logs',{id:req.logId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,product:batch.product||'',week:batch.week||'',created_at:new Date().toISOString()});
+        return {ok:true, pricePerItem:pricePerItem};
+      } else {
+        // Return to work: reduce delivery, reduce batch.qty_delivered
+        var newQtyDelivered = Math.max(0, Number(batch.qty_delivered||0) - returnQty);
+        if(returnQty===origQty){
+          delRow('_deliveries', req.delivId);
+        } else {
+          var newQty = origQty - returnQty;
+          var newTotal = Math.round(Number(deliv.total||0)*newQty/origQty);
+          updRow('_deliveries', req.delivId, {qty:newQty, total:newTotal});
+        }
+        updRow('_batches', req.batchId, {qty_delivered:newQtyDelivered});
+        return {ok:true, newQtyDelivered:newQtyDelivered};
       }
-      return {ok:true, newQtyDelivered:newQtyDelivered};
     });
     case 'addDayLog':        return withLock(()=>addRow('_day_logs',    req.row));
     case 'delDayLog':        return withLock(()=>delRow('_day_logs',    req.id));
