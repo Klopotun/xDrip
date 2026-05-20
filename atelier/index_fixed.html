@@ -1209,7 +1209,7 @@ function buildTailorSalary(u){
     <div class="stat-grid">
       <div class="stat-cell"><div class="stat-lbl">За неделю</div><div class="stat-val">${fmt(stats.accrued)} ₽</div></div>
       <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(stats.totalPaid)} ₽</div></div>
-      <div class="stat-cell"><div class="stat-lbl">Долг итого</div><div class="stat-val" style="color:${stats.totalOwed>0?'var(--red)':'var(--gn)'}">${fmt(stats.totalOwed)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Долг по зп</div><div class="stat-val" style="color:${stats.totalOwed>0?'var(--red)':'var(--gn)'}">${fmt(stats.totalOwed)} ₽</div></div>
     </div>
     ${carry!==0?`<div style="font-size:12px;color:var(--dm);margin-bottom:12px;padding:8px 12px;background:var(--s2);border-radius:10px">Перенос с прошлых недель: <span style="color:var(--red);font-weight:600">${fmt(carry)} ₽</span></div>`:''}
     ${isPiece?`<div class="row2" style="margin-bottom:16px">
@@ -1529,11 +1529,15 @@ function buildAdminSummary(){
 
   const isMonth=S.prodPeriod==='month';
   const selDate=parseWk(S.week);
-  const filterDelivs=isMonth
+  const allFilterDelivs=isMonth
     ?S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
     :S.deliveries.filter(d=>normWeek(d.week)===normWeek(S.week));
+  const filterDelivs=allFilterDelivs.filter(d=>!(d.is_defect==='TRUE'||d.is_defect===true));
+  const filterDefectDelivs=allFilterDelivs.filter(d=>d.is_defect==='TRUE'||d.is_defect===true);
   const totItems=filterDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
   const totMoney=filterDelivs.reduce((s,d)=>s+Number(d.total||0),0);
+  const totDefectItems=filterDefectDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
+  const totDefectMoney=filterDefectDelivs.reduce((s,d)=>s+Number(d.total||0),0);
 
   const hanging=S.batches.filter(b=>!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
   const hangQty=hanging.reduce((s,b)=>s+Number(b.qty_total)-(Number(b.qty_delivered)||0),0);
@@ -1551,7 +1555,7 @@ function buildAdminSummary(){
     <div class="stat-grid">
       <div class="stat-cell"><div class="stat-lbl">Начислено</div><div class="stat-val">${fmt(totA)} ₽</div></div>
       <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(totPaid)} ₽</div></div>
-      <div class="stat-cell"><div class="stat-lbl">Долг</div><div class="stat-val" style="color:${totO>0?'var(--red)':'var(--gn)'}">${fmt(totO)} ₽</div></div>
+      <div class="stat-cell"><div class="stat-lbl">Долг по зп</div><div class="stat-val" style="color:${totO>0?'var(--red)':'var(--gn)'}">${fmt(totO)} ₽</div></div>
     </div>
   </div>`;
 
@@ -1568,7 +1572,6 @@ function buildAdminSummary(){
       <span style="color:var(--dm)">сдано: <strong>${totItems} шт</strong></span>
       <span style="color:var(--dm)">сумма: <strong class="c-gn">${fmt(totMoney)} ₽</strong></span>
       <span style="color:var(--dm)">зависло: <strong style="color:${hangQty>0?'var(--red)':'var(--dm)'}">${hangQty} шт</strong></span>
-      ${defectQty>0?`<span style="color:var(--dm)">брак: <strong style="color:var(--red)">${defectQty} шт</strong></span>`:''}
     </div>
   </div>`;
 
@@ -1588,6 +1591,23 @@ function buildAdminSummary(){
     });
   } else {
     html+='<div style="padding:8px 2px 14px;font-size:13px;color:var(--dm)">Нет сдач за этот период</div>';
+  }
+
+  // ── СДАНО С БРАКОМ ────────────────────────────────────────
+  if(filterDefectDelivs.length){
+    html+='<div class="sec-title" style="margin-top:20px;color:var(--orange)">🗑 Сдано с браком</div>';
+    filterDefectDelivs.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).forEach(d=>{
+      const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+      const emp=S.employees.find(e=>String(e.id)===String(d.tailor_id));
+      html+=`<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid var(--orange)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--orange)">${(b&&b.product)||'—'}</div>
+          <div style="font-size:11px;color:var(--dm)">${(b&&b.size)||'б/р'} · ${d.qty} шт · ${(emp&&emp.name)||'?'}${isMonth?' · '+d.week:''}</div>
+        </div>
+        <div class="mono" style="font-size:13px;white-space:nowrap;margin-left:8px;color:var(--orange)">${fmt(Number(d.total))} ₽</div>
+      </div>`;
+    });
+    html+=`<div style="font-size:12px;color:var(--dm);padding:4px 2px 14px">Итого брак: <strong>${totDefectItems} шт · ${fmt(totDefectMoney)} ₽</strong></div>`;
   }
 
   // ── ЗАВИСЛО — всегда видно ────────────────────────────────
@@ -1625,7 +1645,7 @@ function buildAdminSummary(){
         </div>
         <div style="text-align:right">
           <div class="mono" style="font-size:18px;color:${e.totalOwed>0?'var(--red)':'var(--gn)'}">${fmt(e.totalOwed)} ₽</div>
-          <div style="font-size:11px;color:var(--dm)">долг итого</div>
+          <div style="font-size:11px;color:var(--dm)">долг по зп</div>
         </div>
       </div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);font-size:12px">
@@ -1684,7 +1704,7 @@ function buildAdminDetail(){
       <div class="stat-cell"><div class="stat-lbl">За неделю</div><div class="stat-val" style="color:${stats.owed>0?'var(--red)':'var(--gn)'}">${fmt(stats.owed)} ₽</div></div>
     </div>
     ${stats.totalOwed>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(255,59,48,.07);border-radius:12px;margin-bottom:12px">
-      <span style="font-size:13px;color:var(--dm)">Общий долг (все недели)</span>
+      <span style="font-size:13px;color:var(--dm)">Общий долг по зп (все недели)</span>
       <span style="font-weight:700;color:var(--red)">${fmt(stats.totalOwed)} ₽</span>
     </div>`:''}
     <div class="row2" style="margin-bottom:16px">
@@ -1700,6 +1720,7 @@ function buildAdminDetail(){
             <div style="font-weight:600">${b.product}</div>
             <div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · ${b.order_type||''}</div>
             ${b.due_date?`<div style="font-size:11px;color:var(--red);font-weight:600">⏱ сдать до: ${fmtShortDate(b.due_date)}</div>`:''}
+            ${b.created_at?`<div style="font-size:11px;color:var(--dm)">📅 выдана: ${fmtDT(b.created_at)}</div>`:''}
             <div class="progress"><div class="progress-bar" style="width:${Math.round((Number(b.qty_delivered||0)/Number(b.qty_total))*100)}%"></div></div>
             <div style="font-size:12px;color:var(--dm);margin-top:4px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · <strong style="color:var(--red)">зависло ${rem}</strong></div>
             ${b.note?`<div style="font-size:12px;color:var(--dm)">${b.note}</div>`:''}
@@ -1830,13 +1851,11 @@ function buildAdminPrint(){
   for(let i=0;i<PRINT_ROWS;i++)rowsHtml+=_buildPrintRowHtml(i);
   return`<div>
     <div style="font-size:18px;font-weight:700;margin-bottom:2px">🖨 Калькулятор принта</div>
-    <div style="font-size:12px;color:var(--dm);margin-bottom:16px">Формула учитывает +4 см с каждой стороны</div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr 52px 56px 1fr 1fr;gap:5px;padding:0 2px 6px;border-bottom:1px solid var(--bd);margin-bottom:8px">
       <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Шир, см</div>
       <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Выс, см</div>
       <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Кол</div>
-      <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Коэф</div>
+      <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Наценка</div>
       <div style="font-size:10px;color:var(--ac);text-align:center;font-weight:600;text-transform:uppercase">Своим</div>
       <div style="font-size:10px;color:var(--gn);text-align:center;font-weight:600;text-transform:uppercase">Клиент</div>
     </div>
@@ -1857,11 +1876,6 @@ function buildAdminPrint(){
       </div>
     </div>
 
-    <div style="margin-top:14px;padding:12px 14px;background:var(--s2);border-radius:14px;font-size:11px;color:var(--dm);line-height:1.8">
-      <div style="font-weight:600;color:var(--tx);margin-bottom:2px">Формулы</div>
-      <div><span style="color:var(--ac);font-weight:600">Своим:</span> ((Ш+4)·(В+4)·0,16·Кол + Кол·40) · Коэф</div>
-      <div><span style="color:var(--gn);font-weight:600">Клиентам:</span> ОКРУГЛ(((Ш+4)·(В+4)·0,16·Кол + Кол·400) · Коэф · 2, до 100)</div>
-    </div>
   </div>`;
 }
 
@@ -2306,7 +2320,7 @@ function openReturnModal(delivId,batchId,qty,total){
       </div>
       <div id="ret_hint" style="font-size:12px;color:var(--dm);margin-bottom:12px;padding:10px 12px;background:rgba(255,59,48,.07);border-radius:10px">
         <b>Вернуть в работу:</b> изделия вернутся в остаток пачки — портной должен будет их досдать.<br>
-        <b>Брак:</b> изделия списываются — объём пачки уменьшится, досдавать не нужно.
+        <b>Брак:</b> изделия засчитываются отдельно от общей пачки и возможно по другой цене — отмечаются браком.
       </div>
       <div class="row2">
         <button class="btn-sec" onclick="closeModal()">Отмена</button>
