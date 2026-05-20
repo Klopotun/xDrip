@@ -1584,7 +1584,7 @@ function buildAdminSummary(){
       html+=`<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(b&&b.product)||'—'}</div>
-          <div style="font-size:11px;color:var(--dm)">${(b&&b.size)||'б/р'} · ${d.qty} шт · ${(emp&&emp.name)||'?'}${isMonth?' · '+d.week:''}</div>
+          <div style="font-size:11px;color:var(--dm)">${(b&&b.size)||'б/р'} · ${d.qty} шт · ${(emp&&emp.name)||'?'}${isMonth?' · '+normWeek(d.week):''}</div>
         </div>
         <div class="mono c-gn" style="font-size:13px;white-space:nowrap;margin-left:8px">${fmt(Number(d.total))} ₽</div>
       </div>`;
@@ -1602,7 +1602,7 @@ function buildAdminSummary(){
       html+=`<div class="card" style="padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid var(--orange)">
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--orange)">${(b&&b.product)||'—'}</div>
-          <div style="font-size:11px;color:var(--dm)">${(b&&b.size)||'б/р'} · ${d.qty} шт · ${(emp&&emp.name)||'?'}${isMonth?' · '+d.week:''}</div>
+          <div style="font-size:11px;color:var(--dm)">${(b&&b.size)||'б/р'} · ${d.qty} шт · ${(emp&&emp.name)||'?'}${isMonth?' · '+normWeek(d.week):''}</div>
         </div>
         <div class="mono" style="font-size:13px;white-space:nowrap;margin-left:8px;color:var(--orange)">${fmt(Number(d.total))} ₽</div>
       </div>`;
