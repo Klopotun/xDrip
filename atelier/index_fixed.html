@@ -1490,6 +1490,7 @@ function buildAdmin(){
       <button class="tab on" onclick="switchAdminTab('summary')">Сводка</button>
       <button class="tab" onclick="switchAdminTab('employees')">Сотрудники</button>
       <button class="tab" onclick="switchAdminTab('catalog')">Каталог</button>
+      <button class="tab" onclick="switchAdminTab('print')">🖨 Принт</button>
     </div>
     <div class="cnt" id="admin_cnt"></div>
     <div id="admin_modal"></div>
@@ -1500,11 +1501,10 @@ let _adminTab='summary';
 function switchAdminTab(t){
   _adminTab=t;
   document.querySelectorAll('#admin_tabs .tab').forEach((el,i)=>{
-    el.className='tab '+(['summary','employees','catalog'][i]===t?'on':'');
+    el.className='tab '+(['summary','employees','catalog','print'][i]===t?'on':'');
   });
-  // hide week bar for employees
   const wb=$('admin_wk_bar');
-  if(wb)wb.style.display=t==='employees'?'none':'';
+  if(wb)wb.style.display=(t==='employees'||t==='print')?'none':'';
   renderAdminContent();
 }
 function renderAdminContent(){
@@ -1512,6 +1512,7 @@ function renderAdminContent(){
   else if(_adminTab==='employees') setH('admin_cnt',buildAdminEmployees());
   else if(_adminTab==='detail')    setH('admin_cnt',buildAdminDetail());
   else if(_adminTab==='catalog')   setH('admin_cnt',buildAdminCatalog());
+  else if(_adminTab==='print')     setH('admin_cnt',buildAdminPrint());
 }
 
 // ── ADMIN SUMMARY ─────────────────────────────
@@ -1820,6 +1821,95 @@ function updateCatalogList(){
   const listEl=document.getElementById('cat_list');
   if(countEl)countEl.textContent=buildCatalogCount();
   if(listEl)listEl.innerHTML=buildCatalogItems();
+}
+
+// ── PRINT CALCULATOR ──────────────────────────────────────────────
+const PRINT_ROWS=8;
+function buildAdminPrint(){
+  let rowsHtml='';
+  for(let i=0;i<PRINT_ROWS;i++)rowsHtml+=_buildPrintRowHtml(i);
+  return`<div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:2px">🖨 Калькулятор принта</div>
+    <div style="font-size:12px;color:var(--dm);margin-bottom:16px">Формула учитывает +4 см с каждой стороны</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 52px 56px 1fr 1fr;gap:5px;padding:0 2px 6px;border-bottom:1px solid var(--bd);margin-bottom:8px">
+      <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Шир, см</div>
+      <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Выс, см</div>
+      <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Кол</div>
+      <div style="font-size:10px;color:var(--dm);text-align:center;font-weight:600;text-transform:uppercase">Коэф</div>
+      <div style="font-size:10px;color:var(--ac);text-align:center;font-weight:600;text-transform:uppercase">Своим</div>
+      <div style="font-size:10px;color:var(--gn);text-align:center;font-weight:600;text-transform:uppercase">Клиент</div>
+    </div>
+
+    <div id="print_rows">${rowsHtml}</div>
+
+    <div class="card" style="margin-top:12px;background:linear-gradient(135deg,rgba(82,114,224,.07),rgba(61,200,122,.05));border:1.5px solid rgba(82,114,224,.15)">
+      <div style="font-size:11px;color:var(--dm);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Итого по всем строкам</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--s1);border-radius:14px;padding:14px;text-align:center;box-shadow:0 2px 8px var(--sh2)">
+          <div style="font-size:11px;color:var(--dm);margin-bottom:4px">Для своих</div>
+          <div style="font-size:26px;font-weight:800;color:var(--ac);letter-spacing:-.5px" id="print_total_own">—</div>
+        </div>
+        <div style="background:var(--s1);border-radius:14px;padding:14px;text-align:center;box-shadow:0 2px 8px var(--sh2)">
+          <div style="font-size:11px;color:var(--dm);margin-bottom:4px">Для клиентов</div>
+          <div style="font-size:26px;font-weight:800;color:var(--gn);letter-spacing:-.5px" id="print_total_client">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding:12px 14px;background:var(--s2);border-radius:14px;font-size:11px;color:var(--dm);line-height:1.8">
+      <div style="font-weight:600;color:var(--tx);margin-bottom:2px">Формулы</div>
+      <div><span style="color:var(--ac);font-weight:600">Своим:</span> ((Ш+4)·(В+4)·0,16·Кол + Кол·40) · Коэф</div>
+      <div><span style="color:var(--gn);font-weight:600">Клиентам:</span> ОКРУГЛ(((Ш+4)·(В+4)·0,16·Кол + Кол·400) · Коэф · 2, до 100)</div>
+    </div>
+  </div>`;
+}
+
+function _buildPrintRowHtml(i){
+  const num=i+1;
+  return`<div id="pr_row_${i}" style="display:grid;grid-template-columns:1fr 1fr 52px 56px 1fr 1fr;gap:5px;align-items:center;margin-bottom:6px">
+    <input class="inp" type="number" id="pr_w_${i}" placeholder="Ш" min="0"
+      style="padding:9px 6px;font-size:14px;text-align:center;border-radius:10px" autocomplete="off"
+      oninput="calcPrintRow()">
+    <input class="inp" type="number" id="pr_h_${i}" placeholder="В" min="0"
+      style="padding:9px 6px;font-size:14px;text-align:center;border-radius:10px" autocomplete="off"
+      oninput="calcPrintRow()">
+    <input class="inp" type="number" id="pr_q_${i}" value="1" min="1"
+      style="padding:9px 4px;font-size:14px;text-align:center;border-radius:10px" autocomplete="off"
+      oninput="calcPrintRow()">
+    <input class="inp" type="number" id="pr_c_${i}" value="1" min="0.1" step="0.1"
+      style="padding:9px 4px;font-size:14px;text-align:center;border-radius:10px" autocomplete="off"
+      oninput="calcPrintRow()">
+    <div id="pr_own_${i}" style="text-align:center;font-size:14px;font-weight:600;color:var(--ac);padding:4px 2px;min-height:36px;display:flex;align-items:center;justify-content:center">—</div>
+    <div id="pr_cli_${i}" style="text-align:center;font-size:14px;font-weight:600;color:var(--gn);padding:4px 2px;min-height:36px;display:flex;align-items:center;justify-content:center">—</div>
+  </div>`;
+}
+
+function calcPrintRow(){
+  let totalOwn=0,totalClient=0,hasAny=false;
+  for(let i=0;i<PRINT_ROWS;i++){
+    const w=Number(document.getElementById('pr_w_'+i)?.value||0);
+    const h=Number(document.getElementById('pr_h_'+i)?.value||0);
+    const q=Number(document.getElementById('pr_q_'+i)?.value||1);
+    const c=Number(document.getElementById('pr_c_'+i)?.value||1);
+    const ownEl=document.getElementById('pr_own_'+i);
+    const cliEl=document.getElementById('pr_cli_'+i);
+    if(w>0&&h>0){
+      hasAny=true;
+      const own=((w+4)*(h+4)*0.16*q+(q*40))*c;
+      const client=Math.round((((w+4)*(h+4)*0.16*q+(q*400))*c*2)/100)*100;
+      totalOwn+=own;totalClient+=client;
+      if(ownEl)ownEl.textContent=fmt(Math.round(own))+' ₽';
+      if(cliEl)cliEl.textContent=fmt(client)+' ₽';
+    } else {
+      if(ownEl)ownEl.textContent='—';
+      if(cliEl)cliEl.textContent='—';
+    }
+  }
+  const totOwn=document.getElementById('print_total_own');
+  const totCli=document.getElementById('print_total_client');
+  if(totOwn)totOwn.textContent=hasAny?fmt(Math.round(totalOwn))+' ₽':'—';
+  if(totCli)totCli.textContent=hasAny?fmt(totalClient)+' ₽':'—';
 }
 
 // ═══ ADMIN MODALS — all use real DOM, no render() ════════════════
