@@ -369,6 +369,7 @@ const S={
   adminTab:'summary', detailId:null,
   tailorTab:'batches', mixedTab:'daily',
   prodOpen:false, prodPeriod:'week', pSearch:'',
+  taAdminMode:false,
   employees:[], batches:[], deliveries:[], dayLogs:[], payments:[], products:[],
   adjustments:[], defectLogs:[], priceLogs:[],
 };
@@ -578,10 +579,11 @@ function animateCounter(el,from,to,duration=800){
 // KEY RULE: render() only called on screen/tab changes, NEVER from oninput
 function render(){
   const app=$(  'app');if(!app)return;
-  if(S.view==='home')   app.innerHTML=buildHome();
-  else if(S.view==='pin')    app.innerHTML=buildPin();
-  else if(S.view==='tailor') app.innerHTML=buildTailor();
-  else if(S.view==='admin')  app.innerHTML=buildAdmin();
+  if(S.view==='home')         app.innerHTML=buildHome();
+  else if(S.view==='pin')         app.innerHTML=buildPin();
+  else if(S.view==='tailor')      app.innerHTML=buildTailor();
+  else if(S.view==='tailor-admin')app.innerHTML=buildTailorAdmin();
+  else if(S.view==='admin')       app.innerHTML=buildAdmin();
 }
 
 // ═══ HOME ════════════════════════════════════════════════════════
@@ -624,7 +626,10 @@ function doLogin(){
     if(err){err.textContent='Неверный телефон или пароль';err.style.display='';}
     return;
   }
-  S.user=emp;S.view='tailor';S.tailorTab='batches';S.mixedTab='daily';render();
+  S.user=emp;
+  S.view=(emp.is_admin==='TRUE'||emp.is_admin===true)?'tailor-admin':'tailor';
+  S.tailorTab='batches';S.mixedTab='daily';S.taAdminMode=false;
+  render();
 }
 
 // ═══ PIN ══════════════════════════════════════════════════════════
@@ -685,6 +690,71 @@ function buildTailor(){
     <div id="tailor_modal"></div>
   </div>`;
 }
+// ── TAILOR-ADMIN COMBINED VIEW ────────────────────────────────────
+function buildTailorAdmin(){
+  const u=S.user;if(!u)return buildHome();
+  const tp=u.tailor_type;
+  const tailorTabs=tp==='mixed'
+    ?`<button class="tab ${!S.taAdminMode&&S.mixedTab==='daily'?'on':''}" onclick="S.taAdminMode=false;S.mixedTab='daily';renderTailorAdminContent()">Кройщик</button>
+       <button class="tab ${!S.taAdminMode&&S.mixedTab==='positions'?'on':''}" onclick="S.taAdminMode=false;S.mixedTab='positions';renderTailorAdminContent()">Позиции</button>
+       <button class="tab ${!S.taAdminMode&&S.mixedTab==='salary'?'on':''}" onclick="S.taAdminMode=false;S.mixedTab='salary';renderTailorAdminContent()">Зарплата</button>`
+    :tp==='piece'
+    ?`<button class="tab ${!S.taAdminMode&&S.tailorTab==='batches'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='batches';renderTailorAdminContent()">Мои пачки</button>
+      <button class="tab ${!S.taAdminMode&&S.tailorTab==='delivered'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='delivered';renderTailorAdminContent()">Сдано</button>
+      <button class="tab ${!S.taAdminMode&&S.tailorTab==='salary'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='salary';renderTailorAdminContent()">Зарплата</button>
+      <button class="tab ${!S.taAdminMode&&S.tailorTab==='goals'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='goals';renderTailorAdminContent()">🎯 Цели</button>`
+    :`<button class="tab ${!S.taAdminMode&&S.tailorTab==='batches'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='batches';renderTailorAdminContent()">Мои дни</button>
+      <button class="tab ${!S.taAdminMode&&S.tailorTab==='delivered'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='delivered';renderTailorAdminContent()">История</button>
+      <button class="tab ${!S.taAdminMode&&S.tailorTab==='salary'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='salary';renderTailorAdminContent()">Зарплата</button>`;
+  const adminTabs=`<button class="tab ${S.taAdminMode&&_adminTab==='summary'?'on':''}" onclick="S.taAdminMode=true;_adminTab='summary';renderTailorAdminContent()">Сводка</button>
+    <button class="tab ${S.taAdminMode&&_adminTab==='employees'?'on':''}" onclick="S.taAdminMode=true;_adminTab='employees';renderTailorAdminContent()">Сотрудники</button>
+    <button class="tab ${S.taAdminMode&&_adminTab==='catalog'?'on':''}" onclick="S.taAdminMode=true;_adminTab='catalog';renderTailorAdminContent()">Каталог</button>`;
+  return`<div class="scr">
+    <div class="hdr">
+      <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${normWeek(S.week)}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="exit-btn" title="Синхронизировать" onclick="syncData()" style="font-size:18px;padding:2px 4px">⟳</button>
+        <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0;padding:6px 16px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(210,215,240,.6);flex-shrink:0;position:sticky;top:57px;z-index:9">
+      <button onclick="S.taAdminMode=false;renderTailorAdminContent()" style="flex:1;padding:7px 10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;border-radius:10px 0 0 10px;background:${!S.taAdminMode?'var(--ac)':'var(--s2)'};color:${!S.taAdminMode?'#fff':'var(--dm)'}">Мои задачи</button>
+      <button onclick="S.taAdminMode=true;_adminTab='summary';renderTailorAdminContent()" style="flex:1;padding:7px 10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;border-radius:0 10px 10px 0;background:${S.taAdminMode?'var(--ac)':'var(--s2)'};color:${S.taAdminMode?'#fff':'var(--dm)'}">Администратор</button>
+    </div>
+    <div class="tabs" id="tailor_tabs" style="top:103px">${S.taAdminMode?adminTabs:tailorTabs}</div>
+    <div id="tailor_record"></div>
+    <div class="cnt" id="tailor_cnt"></div>
+    <div id="tailor_modal"></div>
+    <div id="admin_modal"></div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--bd);background:var(--s1);${!S.taAdminMode?'display:none':''}flex-shrink:0" id="ta_wk_bar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:var(--dm);white-space:nowrap">Неделя с</span>
+        <select class="inp" style="margin:0" onchange="S.week=this.value;renderTailorAdminContent()">${WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="cnt" id="admin_cnt" style="${!S.taAdminMode?'display:none':''}"></div>
+  </div>`;
+}
+function renderTailorAdminContent(){
+  const u=S.user;if(!u)return;
+  // Re-render the screen to update tab highlights and week bar visibility
+  const app=document.getElementById('app');
+  if(app)app.innerHTML=buildTailorAdmin();
+  if(S.taAdminMode){
+    renderAdminContent();
+    const wb=$('ta_wk_bar');if(wb)wb.style.display='';
+    const ac=$('admin_cnt');if(ac)ac.style.display='';
+    const tc=$('tailor_cnt');if(tc)tc.style.display='none';
+    const tr=$('tailor_record');if(tr)tr.style.display='none';
+  } else {
+    renderTailorContent();
+    const wb=$('ta_wk_bar');if(wb)wb.style.display='none';
+    const ac=$('admin_cnt');if(ac)ac.style.display='none';
+    const tc=$('tailor_cnt');if(tc)tc.style.display='';
+    const tr=$('tailor_record');if(tr)tr.style.display='';
+  }
+}
+
 function renderRecordBanner(u){
   const el=document.getElementById('tailor_record');
   if(!el)return;
@@ -1877,6 +1947,13 @@ function buildEmpModal(emp){
       <div id="ef_rate_wrap" style="${tp==='piece'?'display:none':''}">
         <div class="fg"><label class="lbl">Ставка (₽/день)</label><input class="inp" type="number" id="ef_rate" value="${emp?.rate||''}" placeholder="4600" autocomplete="off"></div>
       </div>
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--s2);border-radius:14px;margin-bottom:14px;cursor:pointer">
+        <input type="checkbox" id="ef_is_admin" ${(emp?.is_admin==='TRUE'||emp?.is_admin===true)?'checked':''} style="width:18px;height:18px;accent-color:var(--ac)">
+        <div>
+          <div style="font-size:14px;font-weight:600">Права администратора</div>
+          <div style="font-size:12px;color:var(--dm)">Сотрудник будет видеть и свои задачи, и панель управления</div>
+        </div>
+      </label>
       <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
       <button class="btn" onclick="submitEmp('${emp?.id||''}')">${isNew?'Добавить':'Сохранить'}</button></div>
     </div></div>`;
@@ -1891,16 +1968,17 @@ async function submitEmp(editId){
   const password=($('ef_pw')?.value||'').trim();
   const type=$('ef_type')?.value||'piece';
   const rate=Number($('ef_rate')?.value||0);
+  const isAdm=$('ef_is_admin')?.checked?'TRUE':'FALSE';
   if(!name||!surname||!phone||!password){alert('Заполни все поля');return;}
   const isNew=!editId;
-  const row={id:isNew?uid():editId,name,surname,phone,password,tailor_type:type,rate,is_active:true,created_at:new Date().toISOString()};
+  const row={id:isNew?uid():editId,name,surname,phone,password,tailor_type:type,rate,is_active:true,is_admin:isAdm,created_at:new Date().toISOString()};
   if(_busy)return;
   closeModal();
   if(isNew){
     const res=await safeApi('addEmployee',{row});
     if(res!==null){S.employees.push(row);toast(`✓ ${name} добавлена`);renderAdminContent();}
   } else {
-    const updates={name,surname,phone,password,tailor_type:type,rate};
+    const updates={name,surname,phone,password,tailor_type:type,rate,is_admin:isAdm};
     const res=await safeApi('updEmployee',{id:editId,updates});
     if(res!==null){const i=S.employees.findIndex(e=>String(e.id)===String(editId));if(i>=0)S.employees[i]={...S.employees[i],...updates};toast('✓ Сохранено');renderAdminContent();}
   }
@@ -2161,6 +2239,7 @@ async function syncData(){
     }
     hideSpinner();
     if(S.view==='tailor') renderTailorContent();
+    else if(S.view==='tailor-admin') renderTailorAdminContent();
     else if(S.view==='admin') renderAdminContent();
     else render();
   }catch(e){
@@ -2169,7 +2248,11 @@ async function syncData(){
   }
 }
 const _origRender=render;
-render=()=>{_origRender();setTimeout(()=>{if(S.view==='tailor')renderTailorContent();if(S.view==='admin'){renderAdminContent();}},0);};
+render=()=>{_origRender();setTimeout(()=>{
+  if(S.view==='tailor')renderTailorContent();
+  if(S.view==='tailor-admin')renderTailorAdminContent();
+  if(S.view==='admin'){renderAdminContent();}
+},0);};
 init();
 </script>
 </body>

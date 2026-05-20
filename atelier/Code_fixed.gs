@@ -18,7 +18,7 @@ const SHEET_NAMES = {
 };
 
 const HEADERS = {
-  _employees:   ['id','name','surname','phone','password','tailor_type','rate','is_active','created_at'],
+  _employees:   ['id','name','surname','phone','password','tailor_type','rate','is_active','is_admin','created_at'],
   _batches:     ['id','tailor_id','product','size','qty_total','qty_delivered','price','order_type','order_coeff','week','note','is_position','created_at'],
   _deliveries:  ['id','batch_id','tailor_id','qty','total','week','order_coeff','created_at'],
   _day_logs:    ['id','tailor_id','days','deductions','week','created_at'],
