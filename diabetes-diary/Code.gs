@@ -163,13 +163,17 @@ function saveSugar(data) {
 
 // ── API: Summary for a date (YYYY-MM-DD in UTC+3) ───────────────────────────
 
-function getSummary(dateStr) {
+// tzOffsetMinutes: value of new Date().getTimezoneOffset() on the client device
+// e.g. -180 for Moscow (UTC+3). Defaults to -180 if omitted for backwards compat.
+function getSummary(dateStr, tzOffsetMinutes) {
   try {
+    const tzOff = (typeof tzOffsetMinutes === 'number') ? tzOffsetMinutes : -180;
     function belongsToDate(utcIso) {
       try {
         const ms = new Date(utcIso).getTime();
         if (isNaN(ms)) return false;
-        const d = new Date(ms + 3 * 3600000);
+        // Shift UTC ms to local time ms: local = UTC − tzOffset*60000
+        const d = new Date(ms - tzOff * 60000);
         return d.toISOString().slice(0, 10) === dateStr;
       } catch(e2) { return false; }
     }

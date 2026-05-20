@@ -772,30 +772,33 @@ const S = {
   insType:'short', selSite:null, lastSite:null,
   lastLong:0, lastShort:0, lastLongN:'Базальный', lastShortN:'Болюс',
   he:1.0, sugType:'manual',
-  journDate:todayUTC3(), jData:null,
+  journDate:todayLocal(), jData:null,
   editType:null, editId:null, pendFoodId:null,
   drumIdx:1, timeCustom:{}
 };
 const DRUM_MIN=0, DRUM_MAX=80, ITEM_H=48;
 
 /* ═══════════ TIME ═════════════════════════════════════════════════════ */
-function nowUTC3()    { return new Date(Date.now() + 3*3600000); }
-function todayUTC3()  { return nowUTC3().toISOString().slice(0,10); }
-function pad(n)       { return String(n).padStart(2,'0'); }
+// All times use the device's own clock and timezone — no hardcoded offset.
+function pad(n) { return String(n).padStart(2,'0'); }
+function todayLocal() {
+  const d=new Date();
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+// Format a stored UTC ISO string for display in device local time
 function fmtDisp(iso) {
-  const u = new Date(new Date(iso).getTime()+3*3600000);
-  return pad(u.getUTCDate())+'.'+pad(u.getUTCMonth()+1)+' '+pad(u.getUTCHours())+':'+pad(u.getUTCMinutes());
+  const d=new Date(iso);
+  return pad(d.getDate())+'.'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
 }
+// Format a Date object as a datetime-local input value (device local time)
 function fmtInput(d) {
-  const u = new Date(d.getTime()+3*3600000);
-  return u.toISOString().slice(0,16);
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
 }
+// Convert datetime-local input value (device local time) to UTC ISO for storage
 function inputToUTC(val) {
-  // val = "YYYY-MM-DDTHH:mm" shown as UTC+3 → convert to UTC
-  // Parsing manually avoids browser timezone ambiguity
-  const m = val.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
-  if (!m) return new Date().toISOString();
-  return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4]-3, +m[5])).toISOString();
+  // datetime-local strings without timezone suffix are parsed as LOCAL time by browsers
+  const d = new Date(val);
+  return isNaN(d) ? new Date().toISOString() : d.toISOString();
 }
 function getSubmitTime(id) {
   const i=document.getElementById(id+'-tinp');
@@ -803,7 +806,7 @@ function getSubmitTime(id) {
   return new Date().toISOString();
 }
 function refreshTimeDisplays() {
-  const n=nowUTC3(), disp=fmtDisp(n), inpv=fmtInput(n);
+  const n=new Date(), disp=fmtDisp(n.toISOString()), inpv=fmtInput(n);
   ['ins','food','sug'].forEach(k=>{
     const d=document.getElementById(k+'-tdisp');
     const i=document.getElementById(k+'-tinp');
@@ -815,7 +818,7 @@ function toggleTime(k) {
   const inp=document.getElementById(k+'-tinp');
   const tog=inp.previousElementSibling.lastElementChild;
   if(inp.style.display==='none'){
-    inp.value=fmtInput(nowUTC3()); inp.style.display='block';
+    inp.value=fmtInput(new Date()); inp.style.display='block';
     tog.textContent='Сейчас'; S.timeCustom[k]=true;
   } else {
     inp.style.display='none'; tog.textContent='Изменить'; S.timeCustom[k]=false;
@@ -844,15 +847,15 @@ function go(id){
 
 /* ═══════════ MAIN ═════════════════════════════════════════════════════ */
 function initMain(){
-  const n=nowUTC3();
+  const n=new Date();
   const days=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
   const mons=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  const h=n.getUTCHours();
+  const h=n.getHours();
   const greet= h<6?'Доброй ночи': h<12?'Доброе утро': h<18?'Добрый день':'Добрый вечер';
   document.querySelector('#s-main .hero-greeting').textContent=greet;
   document.getElementById('main-time').textContent=
-    days[n.getUTCDay()]+', '+n.getUTCDate()+' '+mons[n.getUTCMonth()]+
-    ' · '+pad(n.getUTCHours())+':'+pad(n.getUTCMinutes())+' МСК';
+    days[n.getDay()]+', '+n.getDate()+' '+mons[n.getMonth()]+
+    ' · '+pad(n.getHours())+':'+pad(n.getMinutes());
   checkPending();
   loadTodayChart();
 }
@@ -860,7 +863,7 @@ function initMain(){
 function loadTodayChart(){
   google.script.run.withSuccessHandler(r=>{
     if(r.ok) drawChart(r);
-  }).withFailureHandler(()=>{}).getSummary(todayUTC3());
+  }).withFailureHandler(()=>{}).getSummary(todayLocal(), new Date().getTimezoneOffset());
 }
 function checkPending(){
   google.script.run.withSuccessHandler(r=>{
@@ -1284,7 +1287,7 @@ function loadJournal(){
   }).withFailureHandler(e=>{
     document.getElementById('j-loading').style.display='none';
     showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
-  }).getSummary(S.journDate);
+  }).getSummary(S.journDate, new Date().getTimezoneOffset());
 }
 const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){
@@ -1433,10 +1436,10 @@ function drawChart(data) {
 
   const CW = W - PAD.l - PAD.r;
 
-  // Day boundaries in UTC (UTC+3 day = UTC day offset by -3h)
-  const today   = todayUTC3();
+  // Day boundaries: local midnight → UTC ms using device timezone offset
+  const today   = todayLocal();
   const [yr,mo,dy] = today.split('-').map(Number);
-  const dayStartMs  = Date.UTC(yr, mo-1, dy) - 3*3600000;
+  const dayStartMs  = new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime();
   const dayMs = 24*3600000;
 
   function xOf(ms) { return PAD.l + Math.max(0, Math.min(1,(ms-dayStartMs)/dayMs)) * CW; }
