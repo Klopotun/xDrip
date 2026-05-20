@@ -453,10 +453,10 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
     <div class="chart-title-row">
       <div class="card-lbl" style="margin-bottom:0">Сегодня</div>
       <div class="chart-legend">
-        <div class="leg"><div class="leg-dot" style="background:#F08888"></div>Сахар</div>
+        <div class="leg"><div class="leg-dot" style="background:#F5A77A"></div>Сахар</div>
         <div class="leg"><div class="leg-dot" style="background:#7B8FFF"></div>Апидра</div>
         <div class="leg"><div class="leg-dot" style="background:#A78BFA"></div>Левемир</div>
-        <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>ХЕ</div>
+        <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>Всасывание</div>
       </div>
     </div>
     <canvas id="main-chart" height="100"></canvas>
@@ -1421,6 +1421,22 @@ function levemirActivity(t_h, dose) {
   return dose * interpolatePK(PK, t_h);
 }
 
+// Carb absorption profile — two speeds selected by meal fat level (HE units)
+// fast: high-GI / low-fat  →  onset 10 min, peak 30–45 min, done in ~2 h
+// slow: high-fat / protein  →  onset 20 min, peak 1.5 h, done in ~4 h
+function carbAbsorption(t_h, he, isFatty) {
+  if (t_h < 0) return 0;
+  if (isFatty) {
+    if (t_h > 4) return 0;
+    const PK = [[0,0],[0.33,0.2],[0.75,0.55],[1.25,0.88],[1.5,1.0],[2.0,0.82],[2.5,0.58],[3.0,0.3],[3.5,0.1],[4.0,0]];
+    return he * interpolatePK(PK, t_h);
+  } else {
+    if (t_h > 2.5) return 0;
+    const PK = [[0,0],[0.17,0.25],[0.33,0.6],[0.5,0.88],[0.75,1.0],[1.0,0.85],[1.5,0.5],[2.0,0.18],[2.5,0]];
+    return he * interpolatePK(PK, t_h);
+  }
+}
+
 /* ═══════════ MAIN CHART ═══════════════════════════════════════════════ */
 
 function drawChart(data) {
@@ -1439,10 +1455,10 @@ function drawChart(data) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
-  // Layout: glucose panel on top, thin IOB/HE strip below
+  // Layout: glucose panel on top, PK activity strip below
   const PAD = {l:26, r:6, t:5, b:17};
-  const GH  = 56;   // glucose panel height
-  const AH  = 14;   // insulin activity strip height
+  const GH  = 54;   // glucose panel height
+  const AH  = 18;   // activity strip height (insulin + food PK curves)
   const GAP = 4;
   const GT  = PAD.t;
   const AT  = GT + GH + GAP;
@@ -1474,10 +1490,11 @@ function drawChart(data) {
   [3.9,7.8].forEach(v=>{ ctx.beginPath(); ctx.moveTo(PAD.l,yGluc(v)); ctx.lineTo(PAD.l+CW,yGluc(v)); ctx.stroke(); });
   ctx.setLineDash([]);
 
-  // ── Compute drug activity at 15-min steps ─────────────────────────────
+  // ── Compute PK curves at 15-min steps ────────────────────────────────
   const STEPS = 97; // 0..24h every 15 min
-  const iobA  = new Float32Array(STEPS); // Apidra (bolus)
-  const iobL  = new Float32Array(STEPS); // Levemir (basal)
+  const iobA  = new Float32Array(STEPS); // Apidra IOB (bolus)
+  const iobL  = new Float32Array(STEPS); // Levemir IOB (basal)
+  const iobF  = new Float32Array(STEPS); // Carb absorption from food
 
   (data.insulin||[]).forEach(inj => {
     const injMs     = new Date(inj.time).getTime();
@@ -1492,12 +1509,28 @@ function drawChart(data) {
     }
   });
 
-  // ── Draw IOB areas — fixed 20U Y-scale, expand only if exceeded ───────
+  (data.food||[]).forEach(meal => {
+    const mealMs = new Date(meal.time).getTime();
+    const he     = parseFloat(meal.he)||0;
+    // Classify meal as fatty if description contains кей hints or he is high
+    // Simple heuristic: >3 HE in one meal tends to be a fuller / more complex meal
+    const isFatty = he >= 3;
+    for (let s=0; s<STEPS; s++) {
+      const t_h = ((dayStartMs + s*15*60000) - mealMs) / 3600000;
+      if (t_h < 0) continue;
+      iobF[s] += carbAbsorption(t_h, he, isFatty);
+    }
+  });
+
+  // ── Activity strip: food absorption (green) + Levemir (purple) + Apidra (blue)
+  // Each series normalized to its own baseline scale so both are readable.
   const peakA = Math.max(...iobA, 0);
   const peakL = Math.max(...iobL, 0);
-  const maxV  = Math.max(20, Math.ceil(peakA), Math.ceil(peakL));
+  const peakF = Math.max(...iobF, 0);
+  const maxI  = Math.max(20, Math.ceil(peakA), Math.ceil(peakL)); // insulin: 20U floor
+  const maxF  = Math.max(4,  Math.ceil(peakF));                   // food: 4 HE floor
 
-  function drawArea(iob, color) {
+  function drawPK(iob, maxV, color) {
     if (!iob.some(v => v > 0.01)) return;
     ctx.beginPath();
     ctx.moveTo(xOfH(0), AT+AH);
@@ -1505,21 +1538,12 @@ function drawChart(data) {
     ctx.lineTo(xOfH(24), AT+AH); ctx.closePath();
     ctx.fillStyle = color; ctx.fill();
   }
-  drawArea(iobL, 'rgba(167,139,250,.38)');
-  drawArea(iobA, 'rgba(123,143,255,.48)');
+  // Draw back-to-front: food → Levemir → Apidra
+  drawPK(iobF, maxF, 'rgba(109,201,154,.45)');   // green  — matches food button
+  drawPK(iobL, maxI, 'rgba(167,139,250,.42)');   // purple — Levemir
+  drawPK(iobA, maxI, 'rgba(123,143,255,.52)');   // blue   — matches insulin button
 
-  // ── HE bars ───────────────────────────────────────────────────────────
-  (data.food||[]).forEach(meal => {
-    const x   = xOf(new Date(meal.time).getTime());
-    const he  = parseFloat(meal.he)||0;
-    const barH = Math.min((he/6)*AH, AH);
-    ctx.fillStyle = 'rgba(109,201,154,.80)';
-    ctx.beginPath();
-    ctx.roundRect ? ctx.roundRect(x-3, AT+AH-barH, 6, barH, 2) : ctx.fillRect(x-3, AT+AH-barH, 6, barH);
-    ctx.fill();
-  });
-
-  // ── Glucose line + dots ───────────────────────────────────────────────
+  // ── Glucose line — orange, matches sugar button ───────────────────────
   const sugarSorted = [...(data.sugar||[])].sort((a,b)=>new Date(a.time)-new Date(b.time));
   if (sugarSorted.length > 1) {
     ctx.beginPath();
@@ -1527,8 +1551,9 @@ function drawChart(data) {
       const x=xOf(new Date(s.time).getTime()), y=yGluc(parseFloat(s.value));
       i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
     });
-    ctx.strokeStyle='rgba(240,136,136,.75)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.strokeStyle='rgba(245,167,122,.80)'; ctx.lineWidth=2; ctx.stroke(); // --a-orange
   }
+  // Glucose dots — clinical color coding (red/green/yellow/orange)
   sugarSorted.forEach(s => {
     const v=parseFloat(s.value);
     const x=xOf(new Date(s.time).getTime()), y=yGluc(v);
@@ -1553,11 +1578,11 @@ function drawChart(data) {
     ctx.fillText(v, PAD.l-3, yGluc(v)+3);
   });
 
-  // ── Current time — thin solid vertical line ───────────────────────────
+  // ── Current time — thin solid accent line ─────────────────────────────
   const nowMs = Date.now();
   if(nowMs>=dayStartMs && nowMs<=dayStartMs+dayMs){
     const xNow=xOf(nowMs);
-    ctx.strokeStyle='rgba(123,143,255,.65)'; ctx.lineWidth=1; ctx.setLineDash([]);
+    ctx.strokeStyle='rgba(123,143,255,.7)'; ctx.lineWidth=1; ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(xNow, GT); ctx.lineTo(xNow, AT+AH); ctx.stroke();
   }
 }
