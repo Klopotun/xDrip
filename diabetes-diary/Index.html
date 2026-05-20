@@ -135,32 +135,20 @@ html, body { height: 100%; background: var(--bg); color: var(--text); overscroll
 }
 
 /* ── Drum picker ─────────────────────────────────────────────────────── */
-.drum-wrap {
-  position:relative; height:220px; overflow:hidden; cursor:grab; user-select:none;
-  border-radius:18px;
-  box-shadow: inset 5px 5px 14px var(--sd), inset -5px -5px 14px var(--sl);
+/* ── Units control (insulin) ─────────────────────────────────────────── */
+.units-ctrl { display:flex; align-items:center; justify-content:center; gap:20px; padding:12px 0; }
+.units-btn {
+  width:52px; height:52px; border-radius:16px; border:none; cursor:pointer;
+  font-size:28px; font-weight:300; color:var(--accent); display:flex; align-items:center; justify-content:center;
+  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
+  transition: box-shadow .13s, transform .12s;
 }
-.drum-wrap:active { cursor:grabbing; }
-.drum-fade-top, .drum-fade-bot {
-  position:absolute; left:0; right:0; height:88px; z-index:2; pointer-events:none;
+.units-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.92); }
+.units-inp {
+  width:90px; text-align:center; font-size:36px; font-weight:800; color:var(--accent);
+  border:none; background:transparent; outline:none; -moz-appearance:textfield;
 }
-.drum-fade-top { top:0;    background:linear-gradient(to bottom, var(--bg) 0%, transparent 100%); }
-.drum-fade-bot { bottom:0; background:linear-gradient(to top,   var(--bg) 0%, transparent 100%); }
-.drum-sel-band {
-  position:absolute; left:16px; right:16px; height:48px; top:86px;
-  border-radius:14px; z-index:1; pointer-events:none;
-  background:rgba(123,143,255,.10);
-  box-shadow: inset 2px 2px 6px rgba(123,143,255,.15), inset -2px -2px 6px rgba(255,255,255,.5);
-}
-.drum-list { list-style:none; padding:86px 0; will-change:transform; }
-.drum-item {
-  height:48px; display:flex; align-items:center; justify-content:center;
-  font-size:20px; font-weight:500; color:var(--muted);
-  transition: color .15s, font-size .15s, font-weight .15s;
-}
-.drum-item.sel { color:var(--accent); font-size:30px; font-weight:800; }
-.drum-caption { text-align:center; font-size:13px; color:var(--muted); margin-top:10px; font-weight:500; }
-.drum-caption strong { color:var(--accent); }
+.units-inp::-webkit-inner-spin-button, .units-inp::-webkit-outer-spin-button { -webkit-appearance:none; }
 
 /* ── Site grid ───────────────────────────────────────────────────────── */
 .site-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -416,16 +404,6 @@ select.inp {
   border-radius:10px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;
 }
 
-/* ── Drum ± buttons ──────────────────────────────────────────────────── */
-.drum-adj-row { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:10px; }
-.drum-adj-btn {
-  width:44px; height:44px; border-radius:14px; border:none; cursor:pointer;
-  font-size:22px; font-weight:300; color:var(--accent); display:flex; align-items:center; justify-content:center;
-  background:var(--bg); box-shadow: 4px 4px 10px var(--sd), -4px -4px 10px var(--sl);
-  transition: box-shadow .13s, transform .12s;
-}
-.drum-adj-btn:active { box-shadow: inset 3px 3px 8px var(--sd), inset -3px -3px 8px var(--sl); transform:scale(.92); }
-.drum-adj-lbl { font-size:12px; color:var(--muted); font-weight:500; }
 
 /* ── Main chart ──────────────────────────────────────────────────────── */
 .chart-card { padding:16px 14px 12px; }
@@ -543,17 +521,10 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
 
   <div class="card">
     <div class="card-lbl">Количество единиц</div>
-    <div class="drum-wrap" id="drum">
-      <div class="drum-fade-top"></div>
-      <div class="drum-fade-bot"></div>
-      <div class="drum-sel-band"></div>
-      <ul class="drum-list" id="drum-list"></ul>
-    </div>
-    <div class="drum-caption">Выбрано: <strong id="drum-val">1</strong> единиц</div>
-    <div class="drum-adj-row">
-      <button class="drum-adj-btn" onclick="adjDrum(-1)">−</button>
-      <span class="drum-adj-lbl">точная настройка</span>
-      <button class="drum-adj-btn" onclick="adjDrum(1)">+</button>
+    <div class="units-ctrl">
+      <button class="units-btn" onclick="adjUnits(-1)">−</button>
+      <input type="number" class="units-inp" id="ins-units" value="1" min="0.5" max="80" step="0.5" inputmode="decimal">
+      <button class="units-btn" onclick="adjUnits(1)">+</button>
     </div>
   </div>
 
@@ -772,9 +743,8 @@ const S = {
   he:1.0, sugType:'manual',
   journDate:todayLocal(), jData:null,
   editType:null, editId:null, pendFoodId:null,
-  drumIdx:1, timeCustom:{}
+  timeCustom:{}
 };
-const DRUM_MIN=0, DRUM_MAX=80, ITEM_H=48;
 
 /* ═══════════ TIME ═════════════════════════════════════════════════════ */
 // All times use the device's own clock and timezone — no hardcoded offset.
@@ -859,12 +829,17 @@ function initMain(){
   loadTodayChart();
 }
 
+function dayBoundsISO(localDateStr){
+  const [yr,mo,dy]=localDateStr.split('-').map(Number);
+  return { s: new Date(yr,mo-1,dy,0,0,0,0).toISOString(),
+           e: new Date(yr,mo-1,dy,23,59,59,999).toISOString() };
+}
 function loadTodayChart(){
   drawChart({insulin:[],food:[],sugar:[]});
-  const _d=todayLocal();
+  const _d=todayLocal(), _b=dayBoundsISO(_d);
   google.script.run.withSuccessHandler(r=>{
     if(r&&r.ok) drawChart(r);
-  }).withFailureHandler(()=>{}).getSummary(_d);
+  }).withFailureHandler(()=>{}).getSummary(_d, _b.s, _b.e);
 }
 function checkPending(){
   google.script.run.withSuccessHandler(r=>{
@@ -878,56 +853,17 @@ function checkPending(){
 }
 function onReminderClick(){ S.sugType='after'; go('s-sug'); }
 
-/* ═══════════ DRUM ═════════════════════════════════════════════════════ */
-let _dy0=0,_di0=0,_drag=false,_vel=0,_ly=0,_lt=0;
-function buildDrum(){
-  const list=document.getElementById('drum-list');
-  list.innerHTML='';
-  for(let v=DRUM_MIN;v<=DRUM_MAX;v++){
-    const li=document.createElement('li'); li.className='drum-item'; li.textContent=v;
-    list.appendChild(li);
-  }
-  renderDrum(true);
-}
-function renderDrum(instant){
-  const list=document.getElementById('drum-list');
-  list.style.transition=instant?'none':'transform .22s cubic-bezier(.25,.46,.45,.94)';
-  list.style.transform=`translateY(${-S.drumIdx*ITEM_H}px)`;
-  list.querySelectorAll('.drum-item').forEach((el,i)=>el.classList.toggle('sel',i===S.drumIdx));
-  document.getElementById('drum-val').textContent=S.drumIdx+DRUM_MIN;
-}
-function clamp(i){ return Math.max(0,Math.min(DRUM_MAX-DRUM_MIN,i)); }
-function dStart(y){ _dy0=y;_di0=S.drumIdx;_drag=true;_vel=0;_ly=y;_lt=Date.now(); }
-function dMove(y){
-  if(!_drag) return;
-  const now=Date.now(),dt=now-_lt||1;
-  _vel=(_ly-y)/dt; _ly=y; _lt=now;
-  S.drumIdx=clamp(_di0+Math.round((_dy0-y)/ITEM_H)); renderDrum(true);
-}
-function dEnd(){
-  if(!_drag) return;
-  _drag=false;
-  // _vel is px/ms — convert to units, cap at ±4 to prevent jumps
-  const momentum = Math.round(Math.max(-4, Math.min(4, _vel * 80 / ITEM_H)));
-  S.drumIdx=clamp(S.drumIdx + momentum);
-  renderDrum(false);
-}
-function attachDrum(){
-  const d=document.getElementById('drum');
-  d.addEventListener('touchstart', e=>{e.preventDefault();dStart(e.touches[0].clientY);},{passive:false});
-  d.addEventListener('touchmove',  e=>{e.preventDefault();dMove(e.touches[0].clientY);},{passive:false});
-  d.addEventListener('touchend',   ()=>dEnd());
-  d.addEventListener('mousedown',  e=>dStart(e.clientY));
-  document.addEventListener('mousemove',e=>{if(_drag)dMove(e.clientY);});
-  document.addEventListener('mouseup',  ()=>{if(_drag)dEnd();});
-  d.addEventListener('wheel',e=>{e.preventDefault();S.drumIdx=clamp(S.drumIdx+(e.deltaY>0?1:-1));renderDrum(false);},{passive:false});
-}
+/* ═══════════ UNITS INPUT ══════════════════════════════════════════════ */
+function getUnits(){ return Math.max(0.5, parseFloat(document.getElementById('ins-units').value)||1); }
+function setUnits(v){ document.getElementById('ins-units').value = Math.max(0.5, Math.min(80, Math.round(v*2)/2)); }
+function adjUnits(d){ setUnits(getUnits()+d); }
 
 /* ═══════════ INSULIN ══════════════════════════════════════════════════ */
 function initIns(){
   S.selSite=null; S.timeCustom.ins=false;
   document.getElementById('ins-notes').value='';
   document.getElementById('ins-tinp').style.display='none';
+  document.getElementById('ins-units').value='1';
   document.querySelectorAll('.site-btn').forEach(b=>b.classList.remove('sel','last'));
   document.getElementById('site-warn').classList.remove('visible');
   document.getElementById('needle-banner').style.display='none';
@@ -948,7 +884,6 @@ function initIns(){
   }).withFailureHandler(()=>selInsType('short')).getLastInsulinInfo();
 }
 
-function adjDrum(d){ S.drumIdx=clamp(S.drumIdx+d); renderDrum(false); }
 
 function resetNeedle(){
   google.script.run.withSuccessHandler(()=>{
@@ -971,7 +906,7 @@ function selInsType(t){
   } else sug.classList.remove('visible');
 }
 function useSuggestedDose(){
-  S.drumIdx=clamp(S.insType==='long'?S.lastLong:S.lastShort); renderDrum(false);
+  setUnits(S.insType==='long' ? S.lastLong : S.lastShort);
 }
 function selSite(s){
   S.selSite=s;
@@ -985,9 +920,9 @@ function getInsName(){
   return document.getElementById('ins-name').value.trim()||'Другой';
 }
 function submitIns(){
-  const units=S.drumIdx+DRUM_MIN;
+  const units=getUnits();
   if(!S.selSite){toast('⚠️ Выберите место укола');return;}
-  if(!units){toast('⚠️ Выберите количество единиц');return;}
+  if(!units||units<=0){toast('⚠️ Укажите количество единиц');return;}
   const btn=document.getElementById('ins-submit');
   btn.disabled=true; btn.textContent='Сохранение…';
   google.script.run.withSuccessHandler(r=>{
@@ -1330,30 +1265,37 @@ function showJEmpty(msg){
   el.style.display='block';
 }
 function loadJournal(){
-  ['j-loading','j-content','j-empty'].forEach((id,i)=>document.getElementById(id).style.display=i===0?'block':'none');
+  document.getElementById('j-loading').style.display='block';
+  document.getElementById('j-content').style.display='none';
+  document.getElementById('j-empty').style.display='none';
+  const _b = dayBoundsISO(S.journDate);
   google.script.run
-    .withSuccessHandler(r=>{
+    .withSuccessHandler(function(r){
       document.getElementById('j-loading').style.display='none';
-      if(!r||!r.ok){showJEmpty(r&&r.error ? r.error : 'Ошибка загрузки');return;}
-      S.jData=r;
-      document.getElementById('st-ins').textContent=r.totalInsulin||'0';
-      document.getElementById('st-he').textContent=(r.totalHE||0)%1===0?(r.totalHE||0):(r.totalHE||0).toFixed(1);
-      document.getElementById('st-sug').textContent=r.avgSugar?r.avgSugar.toFixed(1):'—';
-      const all=[
-        ...(r.insulin||[]).map(x=>({...x,cat:'ins'})),
-        ...(r.food||[]).map(x=>({...x,cat:'food'})),
-        ...(r.sugar||[]).map(x=>({...x,cat:'sug'}))
-      ].sort((a,b)=>new Date(a.time)-new Date(b.time));
-      if(!all.length){showJEmpty();return;}
+      if(!r){ showJEmpty('Нет ответа от сервера'); return; }
+      if(!r.ok){ showJEmpty(r.error||'Ошибка на сервере'); return; }
+      S.jData = r;
+      // stat cards
+      const ins = r.totalInsulin||0, he = r.totalHE||0;
+      document.getElementById('st-ins').textContent = ins%1===0 ? ins : ins.toFixed(1);
+      document.getElementById('st-he').textContent  = he%1===0  ? he  : he.toFixed(1);
+      document.getElementById('st-sug').textContent = r.avgSugar ? r.avgSugar.toFixed(1) : '—';
+      // merge & sort all records
+      var all = [];
+      (r.insulin||[]).forEach(function(x){ all.push(Object.assign({},x,{cat:'ins'})); });
+      (r.food||[]).forEach(function(x){    all.push(Object.assign({},x,{cat:'food'})); });
+      (r.sugar||[]).forEach(function(x){   all.push(Object.assign({},x,{cat:'sug'})); });
+      all.sort(function(a,b){ return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; });
+      if(!all.length){ showJEmpty(); return; }
       document.getElementById('j-content').style.display='block';
-      const tl=document.getElementById('tl'); tl.innerHTML='';
-      all.forEach(item=>tl.appendChild(buildTL(item)));
+      var tl=document.getElementById('tl'); tl.innerHTML='';
+      all.forEach(function(item){ tl.appendChild(buildTL(item)); });
     })
-    .withFailureHandler(e=>{
+    .withFailureHandler(function(e){
       document.getElementById('j-loading').style.display='none';
-      showJEmpty('Ошибка связи: '+(e&&e.message||'нет ответа'));
+      showJEmpty('Ошибка связи: '+(e&&e.message ? e.message : String(e)));
     })
-    .getSummary(S.journDate);
+    .getSummary(S.journDate, _b.s, _b.e);
 }
 const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){
@@ -1641,7 +1583,7 @@ function drawChart(data) {
 
 /* ═══════════ INIT ═════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded',()=>{
-  buildDrum(); attachDrum(); initMain(); refreshTimeDisplays();
+  initMain(); refreshTimeDisplays();
   setInterval(()=>{
     refreshTimeDisplays();
     if(document.getElementById('s-main').classList.contains('active')) initMain();

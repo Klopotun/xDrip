@@ -162,51 +162,40 @@ function saveSugar(data) {
 }
 
 // ── API: Summary for a date ──────────────────────────────────────────────────
-// dateStr : "YYYY-MM-DD" in device local time.
-// Uses Session.getScriptTimeZone() — set this to "Europe/Moscow" in GAS
-// Project Settings → Time zone.
+// dateStr  : "YYYY-MM-DD" local date label (for reference only)
+// startISO : UTC ISO string for local-day midnight  (client: new Date(yr,mo-1,dy).toISOString())
+// endISO   : UTC ISO string for local-day 23:59:59  (client: new Date(yr,mo-1,dy,23,59,59,999).toISOString())
+// ISO string comparison is lexicographic = chronological for UTC ISO strings.
 
-function getSummary(dateStr) {
+function getSummary(dateStr, startISO, endISO) {
   try {
-    var tz = Session.getScriptTimeZone();
-    var i, r, d;
+    var i, r, iso;
     var insulin = [], food = [], sugar = [];
-
-    function cellDate(v) {
-      if (!v) return null;
-      if (v instanceof Date) return v;
-      var d2 = new Date(String(v));
-      return isNaN(d2.getTime()) ? null : d2;
-    }
-    function cellIso(v) {
-      if (!v) return '';
-      return v instanceof Date ? v.toISOString() : String(v);
-    }
 
     var rows = getSheet('Инсулин').getDataRange().getValues();
     for (i = 1; i < rows.length; i++) {
       r = rows[i]; if (!r[0]) continue;
-      d = cellDate(r[1]); if (!d) continue;
-      if (Utilities.formatDate(d, tz, 'yyyy-MM-dd') !== dateStr) continue;
-      insulin.push({ id: String(r[0]), time: cellIso(r[1]),
+      iso = (r[1] instanceof Date) ? r[1].toISOString() : String(r[1]);
+      if (!iso || iso < startISO || iso > endISO) continue;
+      insulin.push({ id: String(r[0]), time: iso,
         insulinType: r[2], insulinName: r[3], units: r[4], site: r[5], notes: r[6] });
     }
 
     rows = getSheet('Еда').getDataRange().getValues();
     for (i = 1; i < rows.length; i++) {
       r = rows[i]; if (!r[0]) continue;
-      d = cellDate(r[1]); if (!d) continue;
-      if (Utilities.formatDate(d, tz, 'yyyy-MM-dd') !== dateStr) continue;
-      food.push({ id: String(r[0]), time: cellIso(r[1]),
+      iso = (r[1] instanceof Date) ? r[1].toISOString() : String(r[1]);
+      if (!iso || iso < startISO || iso > endISO) continue;
+      food.push({ id: String(r[0]), time: iso,
         he: r[2], description: r[3], sugarBefore: r[4], sugarAfterId: String(r[5]) });
     }
 
     rows = getSheet('Сахар').getDataRange().getValues();
     for (i = 1; i < rows.length; i++) {
       r = rows[i]; if (!r[0]) continue;
-      d = cellDate(r[1]); if (!d) continue;
-      if (Utilities.formatDate(d, tz, 'yyyy-MM-dd') !== dateStr) continue;
-      sugar.push({ id: String(r[0]), time: cellIso(r[1]),
+      iso = (r[1] instanceof Date) ? r[1].toISOString() : String(r[1]);
+      if (!iso || iso < startISO || iso > endISO) continue;
+      sugar.push({ id: String(r[0]), time: iso,
         value: r[2], sugarType: r[3], foodId: String(r[4]) });
     }
 
