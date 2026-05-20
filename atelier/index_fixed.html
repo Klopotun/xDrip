@@ -258,9 +258,10 @@ select.inp{color:#1A1C2E}
   color:#fff;padding:14px 24px;border-radius:22px;font-size:16px;font-weight:700;z-index:810;
   animation:counter-roll .4s ease;box-shadow:0 8px 32px rgba(82,114,224,.4)}
 
-.record-banner{background:linear-gradient(135deg,#FFD60A,#FF9500);background-size:300% 100%;
-  animation:record-shine 3s linear infinite;border-radius:14px;padding:14px 16px;margin-bottom:12px;
-  display:flex;align-items:center;gap:12px;color:#fff}
+.record-banner{background:linear-gradient(135deg,#FFF4D6,#FFE8A8);
+  border-radius:20px;padding:14px 16px;margin-bottom:12px;
+  display:flex;align-items:center;gap:12px;color:#6B4F00;
+  border:1px solid rgba(255,200,60,.3);}
 .goal-bar{height:8px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:8px}
 .goal-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ac),#FF9500);transition:width .6s ease}
 .early-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(255,45,85,.1);color:#FF2D55;
@@ -369,6 +370,7 @@ const S={
   tailorTab:'batches', mixedTab:'daily',
   prodOpen:false, prodPeriod:'week', pSearch:'',
   employees:[], batches:[], deliveries:[], dayLogs:[], payments:[], products:[],
+  adjustments:[], defectLogs:[], priceLogs:[],
 };
 
 // ═══ API ══════════════════════════════════════════════════════════
@@ -424,6 +426,27 @@ async function api(action, payload={}) {
 let _tt;
 function toast(msg){const e=document.getElementById('toast');if(!e)return;clearTimeout(_tt);e.textContent=msg;e.className='toast show';_tt=setTimeout(()=>e.className='toast',2200);}
 
+// ═══ DATE HELPERS ═════════════════════════════════════════════════
+const MO_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+function fmtDateTime(s){
+  if(!s)return '';
+  try{
+    const d=new Date(s);
+    if(isNaN(d))return String(s);
+    const day=d.getDate(),mon=MO_GEN[d.getMonth()],yr=d.getFullYear();
+    const h=String(d.getHours()).padStart(2,'0'),m=String(d.getMinutes()).padStart(2,'0');
+    return `${day} ${mon} ${yr} года ${h}:${m}`;
+  }catch{return String(s);}
+}
+function fmtDate(s){
+  if(!s)return '';
+  try{
+    const d=new Date(s);
+    if(isNaN(d))return String(s);
+    return `${d.getDate()} ${MO_GEN[d.getMonth()]} ${d.getFullYear()} года`;
+  }catch{return String(s);}
+}
+
 // ═══ DOM HELPERS ══════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 const setH=(id,h)=>{const e=$(id);if(e)e.innerHTML=h;};
@@ -436,12 +459,14 @@ function getStats(empId,wk){
   if(!emp)return{accrued:0,paid:0,owed:0,totalOwed:0,totalPaid:0};
   const isP=emp.tailor_type==='piece';
   const mw=w=>normWeek(w||'')===normWeek(wk||'');
+  const adjWk=S.adjustments.filter(a=>String(a.tailor_id)===String(empId)&&mw(a.week)).reduce((s,a)=>s+Number(a.amount||0),0);
   const accrued=isP
-    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&mw(d.week)).reduce((s,d)=>s+Number(d.total||0),0)
+    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)&&mw(d.week)).reduce((s,d)=>s+Number(d.total||0),0)+adjWk
     :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)&&mw(l.week)).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
   const paid=S.payments.filter(p=>String(p.tailor_id)===String(empId)&&mw(p.week)).reduce((s,p)=>s+Number(p.amount||0),0);
+  const totalAdj=S.adjustments.filter(a=>String(a.tailor_id)===String(empId)).reduce((s,a)=>s+Number(a.amount||0),0);
   const totalAccrued=isP
-    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)).reduce((s,d)=>s+Number(d.total||0),0)
+    ?S.deliveries.filter(d=>String(d.tailor_id)===String(empId)).reduce((s,d)=>s+Number(d.total||0),0)+totalAdj
     :S.dayLogs.filter(l=>String(l.tailor_id)===String(empId)).reduce((s,l)=>s+Math.round(Number(l.days||0)*Number(emp.rate||0))-Number(l.deductions||0),0);
   const totalPaid=S.payments.filter(p=>String(p.tailor_id)===String(empId)).reduce((s,p)=>s+Number(p.amount||0),0);
   return{accrued,paid,owed:accrued-paid,totalOwed:totalAccrued-totalPaid,totalPaid};
@@ -777,7 +802,10 @@ function buildPieceBatches(u){
           <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
           <div style="font-size:11px;color:var(--dm);margin-top:5px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · осталось <strong>${rem}</strong></div>
         </div>
-        <button class="btn-sm" onclick="openDeliverModal('${b.id}')">Сдать</button>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn-sm" onclick="openDeliverModal('${b.id}')">Сдать</button>
+          <button class="btn-sm" onclick="openTransferModal('${b.id}',false)" style="background:var(--ac-light);color:var(--ac);box-shadow:none;font-size:12px">Передать</button>
+        </div>
       </div>
     </div>`;
   }).join('')+`<div style="text-align:center;font-size:12px;color:var(--dm);margin-top:8px">Завершённые пачки скрыты</div>`;
@@ -1064,7 +1092,9 @@ function buildTailorSalary(u){
   const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
   const delivs=S.deliveries.filter(d=>String(d.tailor_id)===String(u.id)&&normWeek(d.week)===normWeek(S.week));
   const pays=S.payments.filter(p=>String(p.tailor_id)===String(u.id)&&normWeek(p.week)===normWeek(S.week));
+  const adjs=S.adjustments.filter(a=>String(a.tailor_id)===String(u.id)&&normWeek(a.week)===normWeek(S.week));
   const carry=stats.totalOwed-stats.owed;
+  const isPiece=u.tailor_type==='piece';
   return`<div>
     <div class="fg"><label class="lbl">Неделя</label>
       <select class="inp" onchange="S.week=this.value;renderTailorContent()">${wkOpts}</select>
@@ -1074,18 +1104,27 @@ function buildTailorSalary(u){
       <div class="stat-cell"><div class="stat-lbl">Выплачено</div><div class="stat-val c-gn">${fmt(stats.totalPaid)} ₽</div></div>
       <div class="stat-cell"><div class="stat-lbl">Долг итого</div><div class="stat-val" style="color:${stats.totalOwed>0?'var(--red)':'var(--gn)'}">${fmt(stats.totalOwed)} ₽</div></div>
     </div>
-    ${carry!==0?`<div style="font-size:12px;color:var(--dm);margin-bottom:12px;padding:8px 12px;background:var(--s2);border-radius:6px">Перенос с прошлых недель: <span style="color:var(--red);font-weight:600">${fmt(carry)} ₽</span></div>`:''}
-    ${u.tailor_type==='piece'&&delivs.length?`<div class="sec-title">Сдачи за неделю</div>
+    ${carry!==0?`<div style="font-size:12px;color:var(--dm);margin-bottom:12px;padding:8px 12px;background:var(--s2);border-radius:10px">Перенос с прошлых недель: <span style="color:var(--red);font-weight:600">${fmt(carry)} ₽</span></div>`:''}
+    ${isPiece?`<div class="row2" style="margin-bottom:16px">
+      <button class="btn-sec" onclick="openFittingModal('${u.id}')">+ Примерка</button>
+      <button class="btn-sec" onclick="openDeductionModal('${u.id}')" style="color:var(--red)">− Удержание</button>
+    </div>`:''}
+    ${isPiece&&delivs.length?`<div class="sec-title">Сдачи за неделю</div>
     ${delivs.map(d=>{const b=S.batches.find(x=>String(x.id)===String(d.batch_id));return`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-weight:600;font-size:14px">${b?.product||'—'}</div><div style="font-size:12px;color:var(--dm)">${b?.size||'б/р'} · ${d.qty} шт</div></div>
       <div class="mono c-gn">${fmt(d.total)} ₽</div>
     </div>`;}).join('')}`:''}
+    ${isPiece&&adjs.length?`<div class="sec-title">Корректировки</div>
+    ${adjs.map(a=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:14px;font-weight:500">${a.note||'Корректировка'}</div><div style="font-size:11px;color:var(--dm)">${fmtDateTime(a.created_at||'')}</div></div>
+      <div class="mono" style="color:${Number(a.amount)>=0?'var(--gn)':'var(--red)'}">${Number(a.amount)>=0?'+':''}${fmt(Number(a.amount))} ₽</div>
+    </div>`).join('')}`:''}
     ${pays.length?`<div class="sec-title">Выплаты</div>
     ${pays.map(p=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
       <div><div class="mono" style="font-size:16px">${fmt(p.amount)} ₽</div>${p.note?`<div style="font-size:12px;color:var(--dm)">${p.note}</div>`:''}</div>
-      <span style="font-size:12px;color:var(--dm)">${p.date||''}</span>
+      <span style="font-size:11px;color:var(--dm)">${fmtDateTime(p.date||p.created_at||'')}</span>
     </div>`).join('')}`:''}
-    ${!delivs.length&&!pays.length?`<div class="empty" style="padding:30px 0">Нет данных за эту неделю</div>`:''}
+    ${!delivs.length&&!pays.length&&!adjs.length?`<div class="empty" style="padding:30px 0">Нет данных за эту неделю</div>`:''}
   </div>`;
 }
 
@@ -1145,6 +1184,109 @@ function updateDeliverTotal(price,rem){
   setT('dformula',`${price}×${qty}×${coeff}`);
 }
 function closeModal(){setH('tailor_modal','');setH('admin_modal','');}
+
+// ── ПРИМЕРКА / УДЕРЖАНИЕ (для сдельных портных) ──────────────────
+const FITTING_PRICE=200;
+function openFittingModal(tailorId){
+  setH('tailor_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Добавить примерку</div>
+      <div style="background:var(--gn-light);border-radius:16px;padding:16px;margin-bottom:16px;text-align:center;border:1px solid rgba(61,200,122,.2)">
+        <div style="font-size:32px;font-weight:800;color:var(--gn)">+${fmt(FITTING_PRICE)} ₽</div>
+        <div style="font-size:13px;color:var(--dm);margin-top:4px">стоимость одной примерки</div>
+      </div>
+      <div class="fg"><label class="lbl">Примечание (необязательно)</label>
+        <input class="inp" type="text" id="fit_note" placeholder="напр. Иванова пальто" autocomplete="off">
+      </div>
+      <div class="row2">
+        <button class="btn-sec" onclick="closeModal()">Отмена</button>
+        <button class="btn" onclick="submitFitting('${tailorId}')">Добавить примерку</button>
+      </div>
+    </div></div>`);
+}
+async function submitFitting(tailorId){
+  if(_busy)return;
+  const note=($('fit_note')?.value||'Примерка').trim();
+  const row={id:uid(),tailor_id:tailorId,amount:FITTING_PRICE,note,week:NOW_WK,created_at:new Date().toISOString()};
+  try{
+    await api('addAdjustment',{row});
+    S.adjustments.push(row);
+    closeModal();
+    toast('✓ Примерка добавлена +'+fmt(FITTING_PRICE)+' ₽');
+    renderTailorContent();
+  }catch(e){alert(e.message);}
+}
+function openDeductionModal(tailorId){
+  setH('tailor_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Удержание</div>
+      <div style="font-size:13px;color:var(--dm);margin-bottom:16px">Принты, материалы и прочее — будет вычтено из начисления</div>
+      <div class="fg"><label class="lbl">Сумма (₽)</label>
+        <input class="inp" type="number" id="ded_amount" placeholder="0" min="1" autocomplete="off">
+      </div>
+      <div class="fg"><label class="lbl">Причина</label>
+        <input class="inp" type="text" id="ded_note" placeholder="напр. Принт А4" autocomplete="off">
+      </div>
+      <div class="row2">
+        <button class="btn-sec" onclick="closeModal()">Отмена</button>
+        <button class="btn" onclick="submitDeduction('${tailorId}')" style="background:var(--red)">Удержать</button>
+      </div>
+    </div></div>`);
+}
+async function submitDeduction(tailorId){
+  if(_busy)return;
+  const amount=Number($('ded_amount')?.value||0);
+  const note=($('ded_note')?.value||'Удержание').trim();
+  if(!amount||amount<=0){alert('Укажи сумму');return;}
+  const row={id:uid(),tailor_id:tailorId,amount:-amount,note,week:NOW_WK,created_at:new Date().toISOString()};
+  try{
+    await api('addAdjustment',{row});
+    S.adjustments.push(row);
+    closeModal();
+    toast('− '+fmt(amount)+' ₽ удержано');
+    renderTailorContent();
+  }catch(e){alert(e.message);}
+}
+
+// ── ПЕРЕДАЧА ПАЧКИ ───────────────────────────────────────────────
+let _transferBatchId=null;
+function openTransferModal(batchId,fromModal){
+  _transferBatchId=batchId;
+  const b=S.batches.find(x=>String(x.id)===String(batchId));
+  if(!b)return;
+  const others=S.employees.filter(e=>e.is_active!=='FALSE'&&e.is_active!==false&&String(e.id)!==String(b.tailor_id)&&(e.tailor_type==='piece'||e.tailor_type==='mixed'));
+  if(!others.length){alert('Нет других портных для передачи');return;}
+  const opts=others.map(e=>`<option value="${e.id}">${e.name} ${e.surname}</option>`).join('');
+  const target=fromModal?'admin_modal':'tailor_modal';
+  setH(target,`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-t">Передать пачку</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">${b.product} ${b.size||''}</div>
+      <div style="font-size:12px;color:var(--dm);margin-bottom:16px">Остаток: ${Number(b.qty_total)-(Number(b.qty_delivered)||0)} шт</div>
+      <div class="fg"><label class="lbl">Кому передать</label>
+        <select class="inp" id="tr_emp">${opts}</select>
+      </div>
+      <div class="row2">
+        <button class="btn-sec" onclick="closeModal()">Отмена</button>
+        <button class="btn" onclick="submitTransfer()">Передать</button>
+      </div>
+    </div></div>`);
+}
+async function submitTransfer(){
+  if(_busy)return;
+  const newTailorId=$('tr_emp')?.value;
+  if(!newTailorId)return;
+  try{
+    await api('updBatch',{id:_transferBatchId,updates:{tailor_id:newTailorId}});
+    const b=S.batches.find(x=>String(x.id)===String(_transferBatchId));
+    if(b)b.tailor_id=newTailorId;
+    closeModal();
+    const emp=S.employees.find(e=>String(e.id)===String(newTailorId));
+    toast('✓ Пачка передана → '+(emp?emp.name+' '+emp.surname:''));
+    if(S.view==='tailor')renderTailorContent();
+    else renderAdminContent();
+  }catch(e){alert(e.message);}
+}
 
 async function submitDeliver(isPos){
   if(_busy)return;
@@ -1270,6 +1412,10 @@ function buildAdminSummary(){
 
   const hanging=S.batches.filter(b=>!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
   const hangQty=hanging.reduce((s,b)=>s+Number(b.qty_total)-(Number(b.qty_delivered)||0),0);
+  const filterDefects=isMonth
+    ?S.defectLogs.filter(dl=>{const dw=parseWk(dl.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
+    :S.defectLogs.filter(dl=>normWeek(dl.week)===normWeek(S.week));
+  const defectQty=filterDefects.reduce((s,dl)=>s+Number(dl.qty||0),0);
   const now=Date.now(),MS3W=21*24*60*60*1000;
 
   var html='';
@@ -1297,6 +1443,7 @@ function buildAdminSummary(){
       <span style="color:var(--dm)">сдано: <strong>${totItems} шт</strong></span>
       <span style="color:var(--dm)">сумма: <strong class="c-gn">${fmt(totMoney)} ₽</strong></span>
       <span style="color:var(--dm)">зависло: <strong style="color:${hangQty>0?'var(--red)':'var(--dm)'}">${hangQty} шт</strong></span>
+      ${defectQty>0?`<span style="color:var(--dm)">брак: <strong style="color:var(--red)">${defectQty} шт</strong></span>`:''}
     </div>
   </div>`;
 
@@ -1432,6 +1579,7 @@ function buildAdminDetail(){
             ${b.note?`<div style="font-size:12px;color:var(--dm)">${b.note}</div>`:''}
           </div>
           <div style="display:flex;gap:6px">
+            <button class="btn-sec" style="padding:6px 10px;font-size:12px" onclick="openTransferModal('${b.id}',true)">→</button>
             <button class="btn-sec" style="padding:6px 10px;font-size:13px" onclick="openEditBatchModal('${b.id}')">✏</button>
             <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
           </div>
@@ -1468,13 +1616,14 @@ function buildAdminDetail(){
     ${positions.map(b=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-weight:600">${b.product}</div><div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · остаток: ${Number(b.qty_total)-(Number(b.qty_delivered)||0)} шт</div></div>
       <div style="display:flex;gap:6px">
+        <button class="btn-sec" style="padding:6px 10px;font-size:12px" onclick="openTransferModal('${b.id}',true)">→</button>
         <button class="btn-sec" style="padding:6px 10px;font-size:13px" onclick="openEditBatchModal('${b.id}')">✏</button>
         <button class="btn-del" onclick="adminDelBatch('${b.id}')">✕</button>
       </div>
     </div>`).join('')}`:''}
     ${pays.length?`<div class="sec-title">Выплаты</div>
     ${pays.map(p=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
-      <div><div class="mono" style="font-size:16px">${fmt(Number(p.amount))} ₽</div>${p.note?`<div style="font-size:12px;color:var(--dm)">${p.note}</div>`:''}<div style="font-size:11px;color:var(--dm)">${p.date||''}</div></div>
+      <div><div class="mono" style="font-size:16px">${fmt(Number(p.amount))} ₽</div>${p.note?`<div style="font-size:12px;color:var(--dm)">${p.note}</div>`:''}<div style="font-size:11px;color:var(--dm)">${fmtDateTime(p.date||p.created_at||'')}</div></div>
       <button class="btn-del" onclick="adminDelPayment('${p.id}')">✕</button>
     </div>`).join('')}`:''}
     ${!hanging.length&&!delivs.length&&!logs.length&&!pays.length?`<div class="empty" style="padding:30px 0">Нет данных за эту неделю</div>`:''}
@@ -1769,13 +1918,29 @@ function openAddProductModal(){
     </div></div>`);
 }
 function openEditProductModal(id,name,price){
+  const logs=S.priceLogs.filter(l=>String(l.product_id)===String(id)).sort((a,b)=>new Date(b.changed_at)-new Date(a.changed_at)).slice(0,5);
+  const logHtml=logs.length?`<div class="sec-title">История цен</div>${logs.map(l=>`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dm);padding:4px 0;border-bottom:1px solid var(--bd)"><span>${fmtDateTime(l.changed_at)}</span><span>${fmt(Number(l.old_price))} → <b>${fmt(Number(l.new_price))} ₽</b></span></div>`).join('')}`:'';
   setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
     <div class="modal">
-      <div class="modal-t">Цена: ${name}</div>
-      <div class="fg"><label class="lbl">Новая цена (₽)</label><input class="inp" type="number" id="ep_price" value="${price}" autocomplete="off"></div>
-      <div class="row2"><button class="btn-sec" onclick="closeModal()">Отмена</button>
-      <button class="btn" onclick="submitEditProduct('${id}')">Сохранить</button></div>
+      <div class="modal-t">Редактировать изделие</div>
+      <div class="fg"><label class="lbl">Название</label><input class="inp" type="text" id="ep_name" value="${(name||'').replace(/"/g,'&quot;')}" autocomplete="off"></div>
+      <div class="fg"><label class="lbl">Цена (₽)</label><input class="inp" type="number" id="ep_price" value="${price}" autocomplete="off"></div>
+      ${logHtml}
+      <div class="row2" style="margin-top:16px">
+        <button class="btn-sec" onclick="closeModal()">Отмена</button>
+        <button class="btn" onclick="submitEditProduct('${id}')">Сохранить</button>
+      </div>
+      <button onclick="confirmDelProduct('${id}','${(name||'').replace(/'/g,'\\\'')}')" style="width:100%;margin-top:10px;background:none;border:none;color:var(--red);font-size:14px;cursor:pointer;padding:8px">Удалить изделие</button>
     </div></div>`);
+}
+async function confirmDelProduct(id,name){
+  if(!confirm('Удалить «'+name+'»?'))return;
+  if(!confirm('ТОЧНО удалить? Это нельзя отменить.'))return;
+  try{
+    await api('delProduct',{id});
+    S.products=S.products.filter(x=>String(x.id)!==String(id));
+    closeModal();toast('Изделие удалено');renderAdminContent();
+  }catch(e){alert(e.message);}
 }
 async function submitAddProduct(){
   const name=($('ep_name')?.value||'').trim();
@@ -1785,11 +1950,18 @@ async function submitAddProduct(){
   try{await api('addProduct',{row});S.products.push(row);S.products.sort((a,b)=>String(a.name).localeCompare(String(b.name),'ru'));closeModal();toast('Добавлено ✓');renderAdminContent();}catch(e){alert(e.message);}
 }
 async function submitEditProduct(id){
+  const name=($('ep_name')?.value||'').trim();
   const price=Number($('ep_price')?.value||0);
+  if(!name){alert('Укажи название');return;}
+  const updates={name,price};
   try{
-    await api('updProduct',{id,updates:{price}});
-    const p=S.products.find(x=>String(x.id)===String(id));if(p)p.price=price;
-    closeModal();toast('Цена обновлена ✓');renderAdminContent();
+    await api('updProduct',{id,updates,logId:uid()});
+    const p=S.products.find(x=>String(x.id)===String(id));
+    if(p){
+      if(p.price!==price) S.priceLogs.unshift({id:uid(),product_id:id,product_name:name,old_price:p.price,new_price:price,changed_at:new Date().toISOString()});
+      p.name=name;p.price=price;
+    }
+    closeModal();toast('Сохранено ✓');renderAdminContent();
   }catch(e){alert(e.message);}
 }
 
@@ -1878,11 +2050,12 @@ async function submitReturn(){
   const returnQty=Number($('ret_qty')?.value||0);
   const isDefect=document.querySelector('input[name="ret_type"]:checked')?.value==='defect';
   if(!returnQty||returnQty<1||returnQty>_retMaxQty){alert('Укажи корректное количество (1–'+_retMaxQty+')');return;}
+  const logId=uid();
+  const b=S.batches.find(x=>String(x.id)===String(_retBatchId));
+  const tailorId=b?.tailor_id||'';
   try{
-    await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect});
-    // Update local state
+    await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect,logId,tailorId});
     const d=S.deliveries.find(x=>String(x.id)===String(_retDelivId));
-    const b=S.batches.find(x=>String(x.id)===String(_retBatchId));
     if(d&&b){
       if(returnQty===_retMaxQty){
         S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(_retDelivId));
@@ -1891,10 +2064,44 @@ async function submitReturn(){
         d.total=Math.round(_retTotal*d.qty/_retMaxQty);
       }
       b.qty_delivered=Math.max(0,Number(b.qty_delivered||0)-returnQty);
-      if(isDefect) b.qty_total=Math.max(b.qty_delivered,Number(b.qty_total||0)-returnQty);
+      if(isDefect){
+        b.qty_total=Math.max(b.qty_delivered,Number(b.qty_total||0)-returnQty);
+        S.defectLogs.push({id:logId,batch_id:_retBatchId,tailor_id:tailorId,qty:returnQty,product:b.product||'',week:b.week||'',created_at:new Date().toISOString()});
+      }
     }
-    closeModal();
     toast(isDefect?'🗑 Брак списан':'↩ Возвращено в работу');
+    if(isDefect&&b){
+      openDefectPriceModal(_retBatchId,b.product||'',b.price||0);
+    } else {
+      closeModal();
+      renderAdminContent();
+    }
+  }catch(e){alert(e.message);}
+}
+function openDefectPriceModal(batchId,product,currentPrice){
+  setH('admin_modal',`<div class="modal-bg">
+    <div class="modal">
+      <div class="modal-t">Скорректировать цену</div>
+      <div style="font-size:14px;color:var(--dm);margin-bottom:16px">Брак списан. Нужно ли скорректировать цену пошива «${product}»?</div>
+      <div style="font-size:12px;color:var(--dm);margin-bottom:8px">Текущая цена: <b>${fmt(currentPrice)} ₽/шт</b></div>
+      <div class="fg"><label class="lbl">Новая цена (₽/шт)</label>
+        <input class="inp" type="number" id="dp_price" value="${currentPrice}" autocomplete="off">
+      </div>
+      <div class="row2">
+        <button class="btn-sec" onclick="closeModal();renderAdminContent()">Оставить как есть</button>
+        <button class="btn" onclick="submitDefectPrice('${batchId}')">Изменить цену</button>
+      </div>
+    </div></div>`);
+}
+async function submitDefectPrice(batchId){
+  const price=Number($('dp_price')?.value||0);
+  if(!price||price<=0){alert('Укажи цену');return;}
+  try{
+    await api('updBatch',{id:batchId,updates:{price}});
+    const b=S.batches.find(x=>String(x.id)===String(batchId));
+    if(b)b.price=price;
+    closeModal();
+    toast('✓ Цена скорректирована');
     renderAdminContent();
   }catch(e){alert(e.message);}
 }
@@ -1913,6 +2120,9 @@ async function init(){
     S.dayLogs=data.dayLogs||[];
     S.payments=data.payments||[];
     S.products=data.products||[];
+    S.adjustments=data.adjustments||[];
+    S.defectLogs=data.defectLogs||[];
+    S.priceLogs=data.priceLogs||[];
     // Build datalist once — no DOM changes during typing
     const dl=document.getElementById('prod_list');
     if(dl&&S.products.length){
@@ -1942,6 +2152,9 @@ async function syncData(){
     S.dayLogs=data.dayLogs||[];
     S.payments=data.payments||[];
     S.products=data.products||[];
+    S.adjustments=data.adjustments||[];
+    S.defectLogs=data.defectLogs||[];
+    S.priceLogs=data.priceLogs||[];
     const dl=document.getElementById('prod_list');
     if(dl&&S.products.length){
       dl.innerHTML=S.products.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join('');

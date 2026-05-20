@@ -6,21 +6,27 @@
 const ADMIN_PIN = '4242';
 
 const SHEET_NAMES = {
-  employees: '_employees',
-  batches:   '_batches',
-  deliveries:'_deliveries',
-  dayLogs:   '_day_logs',
-  payments:  '_payments',
-  products:  '_products'
+  employees:   '_employees',
+  batches:     '_batches',
+  deliveries:  '_deliveries',
+  dayLogs:     '_day_logs',
+  payments:    '_payments',
+  products:    '_products',
+  adjustments: '_adjustments',
+  defectLogs:  '_defect_logs',
+  priceLogs:   '_price_logs'
 };
 
 const HEADERS = {
-  _employees:  ['id','name','surname','phone','password','tailor_type','rate','is_active','created_at'],
-  _batches:    ['id','tailor_id','product','size','qty_total','qty_delivered','price','order_type','order_coeff','week','note','is_position','created_at'],
-  _deliveries: ['id','batch_id','tailor_id','qty','total','week','order_coeff','created_at'],
-  _day_logs:   ['id','tailor_id','days','deductions','week','created_at'],
-  _payments:   ['id','tailor_id','amount','note','week','date','created_at'],
-  _products:   ['id','name','price','is_active','created_at']
+  _employees:   ['id','name','surname','phone','password','tailor_type','rate','is_active','created_at'],
+  _batches:     ['id','tailor_id','product','size','qty_total','qty_delivered','price','order_type','order_coeff','week','note','is_position','created_at'],
+  _deliveries:  ['id','batch_id','tailor_id','qty','total','week','order_coeff','created_at'],
+  _day_logs:    ['id','tailor_id','days','deductions','week','created_at'],
+  _payments:    ['id','tailor_id','amount','note','week','date','created_at'],
+  _products:    ['id','name','price','is_active','created_at'],
+  _adjustments: ['id','tailor_id','amount','note','week','created_at'],
+  _defect_logs: ['id','batch_id','tailor_id','qty','product','week','created_at'],
+  _price_logs:  ['id','product_id','product_name','old_price','new_price','changed_at']
 };
 
 // ── HTML SERVE ───────────────────────────────────────────────────────
@@ -117,17 +123,31 @@ function dispatch(req) {
         batchUpdates.qty_total = newQtyTotal;
       }
       updRow('_batches', req.batchId, batchUpdates);
+      if(req.isDefect){
+        addRow('_defect_logs',{id:req.logId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,product:batch.product||'',week:batch.week||'',created_at:new Date().toISOString()});
+      }
       return {ok:true, newQtyDelivered:newQtyDelivered};
     });
-    case 'addDayLog':      return withLock(()=>addRow('_day_logs',    req.row));
-    case 'delDayLog':      return withLock(()=>delRow('_day_logs',    req.id));
-    case 'addPayment':     return withLock(()=>addRow('_payments',    req.row));
-    case 'delPayment':     return withLock(()=>delRow('_payments',    req.id));
-    case 'fireEmployee':   return withLock(()=>updRow('_employees', req.id, {is_active:'FALSE'}));
-    case 'rehireEmployee': return withLock(()=>updRow('_employees', req.id, {is_active:'TRUE'}));
-    case 'addProduct':     return withLock(()=>addRow('_products',    req.row));
-    case 'updProduct':     return withLock(()=>updRow('_products',    req.id, req.updates));
-    case 'hideProduct':    return withLock(()=>updRow('_products',    req.id, {is_active:'FALSE'}));
+    case 'addDayLog':        return withLock(()=>addRow('_day_logs',    req.row));
+    case 'delDayLog':        return withLock(()=>delRow('_day_logs',    req.id));
+    case 'addPayment':       return withLock(()=>addRow('_payments',    req.row));
+    case 'delPayment':       return withLock(()=>delRow('_payments',    req.id));
+    case 'addAdjustment':    return withLock(()=>addRow('_adjustments', req.row));
+    case 'delAdjustment':    return withLock(()=>delRow('_adjustments', req.id));
+    case 'fireEmployee':     return withLock(()=>updRow('_employees', req.id, {is_active:'FALSE'}));
+    case 'rehireEmployee':   return withLock(()=>updRow('_employees', req.id, {is_active:'TRUE'}));
+    case 'addProduct':       return withLock(()=>addRow('_products',    req.row));
+    case 'updProduct':       return withLock(()=>{
+      var rows=getRows('_products');
+      var prod=null;for(var i=0;i<rows.length;i++){if(String(rows[i].id)===String(req.id)){prod=rows[i];break;}}
+      var result=updRow('_products',req.id,req.updates);
+      if(prod&&req.updates.price!==undefined&&Number(req.updates.price)!==Number(prod.price)){
+        addRow('_price_logs',{id:req.logId||String(Date.now()),product_id:req.id,product_name:prod.name,old_price:prod.price,new_price:req.updates.price,changed_at:new Date().toISOString()});
+      }
+      return result;
+    });
+    case 'hideProduct':      return withLock(()=>updRow('_products',    req.id, {is_active:'FALSE'}));
+    case 'delProduct':       return withLock(()=>delRow('_products',    req.id));
     default: throw new Error('Неизвестное действие: ' + req.action);
   }
 }
@@ -217,12 +237,15 @@ function withLock(fn) {
 
 function getAllData() {
   return {
-    employees:  getRows('_employees'), // load all including fired
-    batches:    getRows('_batches'),
-    deliveries: getRows('_deliveries'),
-    dayLogs:    getRows('_day_logs'),
-    payments:   getRows('_payments'),
-    products:   getRows('_products').filter(p => p.is_active !== false && p.is_active !== 'FALSE')
+    employees:   getRows('_employees'),
+    batches:     getRows('_batches'),
+    deliveries:  getRows('_deliveries'),
+    dayLogs:     getRows('_day_logs'),
+    payments:    getRows('_payments'),
+    products:    getRows('_products').filter(p => p.is_active !== false && p.is_active !== 'FALSE'),
+    adjustments: getRows('_adjustments'),
+    defectLogs:  getRows('_defect_logs'),
+    priceLogs:   getRows('_price_logs')
   };
 }
 
