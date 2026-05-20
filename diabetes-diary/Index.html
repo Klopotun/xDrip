@@ -416,12 +416,12 @@ select.inp {
   <div class="card">
     <div class="card-lbl">Место укола</div>
     <div class="site-grid" id="site-grid">
-      <button class="site-btn" id="site-sr" onclick="selSite('sr')"><span class="s-ico">🫃</span>Живот<br>правая</button>
       <button class="site-btn" id="site-sl" onclick="selSite('sl')"><span class="s-ico">🫃</span>Живот<br>левая</button>
-      <button class="site-btn" id="site-ar" onclick="selSite('ar')"><span class="s-ico">💪</span>Рука<br>правая</button>
+      <button class="site-btn" id="site-sr" onclick="selSite('sr')"><span class="s-ico">🫃</span>Живот<br>правая</button>
       <button class="site-btn" id="site-al" onclick="selSite('al')"><span class="s-ico">💪</span>Рука<br>левая</button>
-      <button class="site-btn" id="site-br" onclick="selSite('br')"><span class="s-ico">🍑</span>Ягодица<br>правая</button>
+      <button class="site-btn" id="site-ar" onclick="selSite('ar')"><span class="s-ico">💪</span>Рука<br>правая</button>
       <button class="site-btn" id="site-bl" onclick="selSite('bl')"><span class="s-ico">🍑</span>Ягодица<br>левая</button>
+      <button class="site-btn" id="site-br" onclick="selSite('br')"><span class="s-ico">🍑</span>Ягодица<br>правая</button>
     </div>
   </div>
 
@@ -863,7 +863,7 @@ function loadJournal(){
   }).withFailureHandler(()=>{document.getElementById('j-loading').style.display='none';toast('❌ Ошибка загрузки');})
   .getSummary(S.journDate);
 }
-const SITES={sr:'Живот (право)',sl:'Живот (лево)',ar:'Рука правая',al:'Рука левая',br:'Ягодица правая',bl:'Ягодица левая'};
+const SITES={sl:'Живот (лево)',sr:'Живот (право)',al:'Рука левая',ar:'Рука правая',bl:'Ягодица левая',br:'Ягодица правая'};
 function buildTL(item){
   const w=document.createElement('div'); w.className='tl-item';
   let title='',detail='';
@@ -903,7 +903,7 @@ function openEdit(cat,id){
   const tv=fmtInput(new Date(rec.time));
   let html=`<div class="card"><div class="card-lbl">Время</div><input type="datetime-local" class="inp" id="e-time" value="${tv}"></div>`;
   if(cat==='ins'){
-    const sOpts=[['sr','Живот правая'],['sl','Живот левая'],['ar','Рука правая'],['al','Рука левая'],['br','Ягодица правая'],['bl','Ягодица левая']]
+    const sOpts=[['sl','Живот левая'],['sr','Живот правая'],['al','Рука левая'],['ar','Рука правая'],['bl','Ягодица левая'],['br','Ягодица правая']]
       .map(([v,l])=>`<option value="${v}" ${rec.site===v?'selected':''}>${l}</option>`).join('');
     html+=`<div class="card"><div class="card-lbl">Вид</div>
       <select class="inp" id="e-itype">
