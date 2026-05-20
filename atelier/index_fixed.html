@@ -8,45 +8,47 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#F2F2F7;
+  --bg:#E8EBF4;
   --s1:#FFFFFF;
-  --s2:#F2F2F7;
-  --s3:#E5E5EA;
-  --bd:#E5E5EA;
-  --tx:#1C1C1E;
-  --dm:#8E8E93;
-  --d2:#C7C7CC;
-  --ac:#007AFF;
-  --ac-light:rgba(0,122,255,.1);
-  --gn:#34C759;
-  --gn-light:rgba(52,199,89,.1);
-  --red:#FF3B30;--orange:#FF9500;
-  --red-light:rgba(255,59,48,.08);
-  --orange:#FF9500;
+  --s2:#EEF0F9;
+  --s3:#E0E3F0;
+  --bd:#D8DCF0;
+  --tx:#1A1C2E;
+  --dm:#8A90B8;
+  --d2:#BEC5DF;
+  --ac:#5272E0;
+  --ac-light:rgba(82,114,224,.10);
+  --gn:#3DC87A;
+  --gn-light:rgba(61,200,122,.10);
+  --red:#FF4D6A;
+  --red-light:rgba(255,77,106,.08);
+  --orange:#FF9F43;
+  --sh:rgba(80,100,200,.09);
+  --sh2:rgba(80,100,200,.05);
 }
 html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Onest',sans-serif;font-size:16px;-webkit-font-smoothing:antialiased}
 .scr{min-height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
 
 /* HEADER */
 .hdr{
-  background:rgba(255,255,255,.85);
-  backdrop-filter:saturate(180%) blur(20px);
-  -webkit-backdrop-filter:saturate(180%) blur(20px);
-  border-bottom:1px solid var(--bd);
+  background:rgba(255,255,255,.80);
+  backdrop-filter:saturate(200%) blur(24px);
+  -webkit-backdrop-filter:saturate(200%) blur(24px);
+  border-bottom:1px solid rgba(210,215,240,.6);
   padding:14px 20px;
   display:flex;align-items:center;justify-content:space-between;
   flex-shrink:0;position:sticky;top:0;z-index:10;
 }
 .hdr-t{font-size:17px;font-weight:700;letter-spacing:-.3px;color:var(--tx)}
 .hdr-sub{font-size:12px;color:var(--dm);margin-top:1px}
-.exit-btn,.back-btn{background:none;border:none;color:var(--ac);cursor:pointer;font-size:15px;font-family:inherit;padding:4px 0;font-weight:400}
+.exit-btn,.back-btn{background:none;border:none;color:var(--ac);cursor:pointer;font-size:15px;font-family:inherit;padding:4px 0;font-weight:500}
 
-/* TABS — iOS segment style */
+/* TABS */
 .tabs{
-  background:rgba(255,255,255,.85);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--bd);
+  background:rgba(255,255,255,.80);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid rgba(210,215,240,.6);
   flex-shrink:0;position:sticky;top:57px;z-index:9;
   display:flex;overflow-x:auto;padding:0 16px;
 }
@@ -64,41 +66,45 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:-app
 /* CARDS */
 .card{
   background:var(--s1);
-  border-radius:16px;
+  border-radius:20px;
   padding:16px;
   margin-bottom:12px;
-  box-shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
-  border:none;
+  box-shadow:0 2px 8px var(--sh2),0 8px 28px var(--sh);
+  border:1px solid rgba(220,225,248,.5);
 }
 
 /* BUTTONS */
 .btn{
   background:var(--ac);border:none;color:#fff;
-  padding:15px;border-radius:14px;
+  padding:15px;border-radius:16px;
   font-size:16px;font-weight:600;cursor:pointer;
   width:100%;font-family:inherit;letter-spacing:-.2px;
-  transition:opacity .15s;
+  box-shadow:0 4px 16px rgba(82,114,224,.35);
+  transition:opacity .15s,transform .1s;
 }
-.btn:active{opacity:.8}
+.btn:active{opacity:.85;transform:scale(.98)}
 .btn-sm{
   background:var(--ac);border:none;color:#fff;
-  padding:8px 16px;border-radius:10px;
+  padding:8px 16px;border-radius:12px;
   font-size:14px;font-weight:600;cursor:pointer;
   font-family:inherit;white-space:nowrap;
+  box-shadow:0 3px 10px rgba(82,114,224,.30);
 }
-.btn-sm:active{opacity:.8}
+.btn-sm:active{opacity:.85}
 .btn-sec{
   background:var(--ac-light);border:none;color:var(--ac);
-  padding:10px 18px;border-radius:12px;
+  padding:10px 18px;border-radius:14px;
   font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+  border:1.5px solid rgba(82,114,224,.15);
 }
 .btn-sec:active{opacity:.7}
 .btn-ghost{
   background:var(--s1);border:none;color:var(--ac);
-  padding:15px;border-radius:14px;font-size:16px;
+  padding:15px;border-radius:16px;font-size:16px;
   font-weight:500;cursor:pointer;width:100%;font-family:inherit;
   margin-top:10px;
-  box-shadow:0 1px 3px rgba(0,0,0,.07);
+  box-shadow:0 2px 8px var(--sh2),0 6px 20px var(--sh);
+  border:1px solid rgba(220,225,248,.6);
 }
 .btn-ghost:active{opacity:.7}
 .btn-del{
@@ -109,25 +115,24 @@ html,body{min-height:100vh;background:var(--bg);color:var(--tx);font-family:-app
 
 /* INPUTS */
 .inp{
-  background:var(--s2);border:none;color:var(--tx) !important;
-  padding:12px 14px;border-radius:12px;
+  background:var(--s2);border:1.5px solid transparent;color:var(--tx) !important;
+  padding:12px 14px;border-radius:14px;
   font-size:16px;width:100%;font-family:inherit;
   outline:none;-webkit-appearance:none;appearance:none;
-  transition:box-shadow .2s;
+  transition:border-color .2s,box-shadow .2s;
   -webkit-text-fill-color:var(--tx);
 }
 .inp::placeholder{color:var(--dm);-webkit-text-fill-color:var(--dm)}
-/* Force dark text in all input states */
-input[list]{color:#1C1C1E !important;-webkit-text-fill-color:#1C1C1E !important}
-.inp:focus{box-shadow:0 0 0 3px rgba(0,122,255,.25)}
+input[list]{color:#1A1C2E !important;-webkit-text-fill-color:#1A1C2E !important}
+.inp:focus{border-color:rgba(82,114,224,.40);box-shadow:0 0 0 4px rgba(82,114,224,.10)}
 .inp[type=number]{-moz-appearance:textfield}
 .inp[type=number]::-webkit-inner-spin-button,.inp[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 select.inp{
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238E8E93'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238A90B8'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center;background-size:20px;padding-right:36px;
 }
-select.inp option{background:#fff;color:#1C1C1E}
-select.inp{color:#1C1C1E}
+select.inp option{background:#fff;color:#1A1C2E}
+select.inp{color:#1A1C2E}
 .lbl{font-size:13px;font-weight:500;color:var(--dm);display:block;margin-bottom:6px;letter-spacing:-.1px}
 .fg{margin-bottom:14px}
 .row2{display:flex;gap:10px;margin-bottom:14px}
@@ -137,9 +142,10 @@ select.inp{color:#1C1C1E}
 .ac-wrap{position:relative}
 .ac-drop{
   position:absolute;top:calc(100% + 6px);left:0;right:0;
-  background:var(--s1);border-radius:14px;
+  background:var(--s1);border-radius:18px;
   max-height:220px;overflow-y:auto;z-index:100;
-  box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.08);
+  box-shadow:0 8px 32px var(--sh),0 2px 8px var(--sh2);
+  border:1px solid rgba(220,225,248,.6);
   display:none;
 }
 .ac-drop.open{display:block}
@@ -154,9 +160,10 @@ select.inp{color:#1C1C1E}
 
 /* TOTAL BOX */
 .total-box{
-  background:var(--gn-light);border-radius:14px;
+  background:var(--gn-light);border-radius:16px;
   padding:14px 16px;display:flex;justify-content:space-between;align-items:center;
   margin-bottom:14px;
+  border:1px solid rgba(61,200,122,.15);
 }
 
 /* MONEY + COLORS */
@@ -166,28 +173,30 @@ select.inp{color:#1C1C1E}
 /* STAT GRID */
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .stat-cell{
-  background:var(--s1);border-radius:14px;
+  background:var(--s1);border-radius:18px;
   padding:12px 10px;text-align:center;
-  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  box-shadow:0 2px 8px var(--sh2),0 6px 20px var(--sh);
+  border:1px solid rgba(220,225,248,.5);
 }
-.stat-lbl{font-size:10px;color:var(--dm);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.stat-lbl{font-size:10px;color:var(--dm);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;font-weight:600}
 .stat-val{font-size:16px;font-weight:700;letter-spacing:-.3px}
 
 /* PROGRESS */
 .progress{height:5px;background:var(--s3);border-radius:3px;margin-top:8px;overflow:hidden}
-.progress-bar{height:100%;background:var(--ac);border-radius:3px;transition:width .3s}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--ac),#7B94F0);border-radius:3px;transition:width .3s}
 
 /* EMPTY */
 .empty{text-align:center;padding:44px 20px;color:var(--dm)}
 
 /* SECTION TITLE */
-.sec-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--dm);margin:20px 0 8px;padding:0 4px}
+.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--dm);margin:20px 0 8px;padding:0 4px}
 
 /* INFO BAR */
 .info-bar{
   padding:12px 14px;background:var(--ac-light);
-  border-radius:12px;margin-bottom:14px;
+  border-radius:14px;margin-bottom:14px;
   font-size:14px;color:var(--ac);font-weight:500;
+  border:1px solid rgba(82,114,224,.12);
 }
 
 /* PIN */
@@ -200,29 +209,32 @@ select.inp{color:#1C1C1E}
   background:var(--s1);border:none;border-radius:50%;
   color:var(--tx);cursor:pointer;font-family:inherit;
   touch-action:manipulation;user-select:none;
-  box-shadow:0 2px 8px rgba(0,0,0,.1);
+  box-shadow:0 2px 8px var(--sh2),0 6px 20px var(--sh);
+  border:1px solid rgba(220,225,248,.5);
   aspect-ratio:1;display:flex;align-items:center;justify-content:center;
 }
 .num-btn:active{background:var(--s3);transform:scale(.94)}
 
 /* MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;z-index:200;backdrop-filter:blur(4px)}
+.modal-bg{position:fixed;inset:0;background:rgba(20,24,50,.40);display:flex;align-items:flex-end;z-index:200;backdrop-filter:blur(6px)}
 .modal{
-  background:var(--s1);border-radius:24px 24px 0 0;
-  padding:8px 20px 32px;width:100%;max-width:480px;margin:0 auto;
+  background:var(--s1);border-radius:28px 28px 0 0;
+  padding:8px 20px 36px;width:100%;max-width:480px;margin:0 auto;
   max-height:92vh;overflow-y:auto;
+  box-shadow:0 -4px 32px var(--sh);
 }
-.modal::before{content:'';display:block;width:36px;height:4px;background:var(--d2);border-radius:2px;margin:8px auto 20px}
+.modal::before{content:'';display:block;width:40px;height:4px;background:var(--d2);border-radius:2px;margin:10px auto 22px}
 .modal-t{font-size:20px;font-weight:700;margin-bottom:16px;letter-spacing:-.3px}
 
 /* TOAST */
 .toast{
   position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
-  background:rgba(28,28,30,.9);color:#fff;
-  padding:11px 20px;border-radius:20px;
+  background:rgba(26,28,46,.88);color:#fff;
+  padding:11px 22px;border-radius:22px;
   font-size:14px;font-weight:500;z-index:500;
   opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;
-  backdrop-filter:blur(10px);
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 20px rgba(20,24,50,.25);
 }
 .toast.show{opacity:1}
 
@@ -242,9 +254,9 @@ select.inp{color:#1C1C1E}
 
 .milestone-overlay{position:fixed;inset:0;z-index:800;pointer-events:none;overflow:hidden}
 .spark{position:absolute;font-size:20px;animation:star-float 1.2s ease-out forwards}
-.milestone-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#34C759,#007AFF);
-  color:#fff;padding:14px 24px;border-radius:20px;font-size:16px;font-weight:700;z-index:810;
-  animation:counter-roll .4s ease;box-shadow:0 8px 32px rgba(52,199,89,.4)}
+.milestone-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#3DC87A,#5272E0);
+  color:#fff;padding:14px 24px;border-radius:22px;font-size:16px;font-weight:700;z-index:810;
+  animation:counter-roll .4s ease;box-shadow:0 8px 32px rgba(82,114,224,.4)}
 
 .record-banner{background:linear-gradient(135deg,#FFD60A,#FF9500);background-size:300% 100%;
   animation:record-shine 3s linear infinite;border-radius:14px;padding:14px 16px;margin-bottom:12px;
@@ -260,20 +272,20 @@ select.inp{color:#1C1C1E}
 </head>
 <body>
 <div id="loader" class="loader">
-  <div style="font-size:28px;font-weight:700;color:var(--ac);letter-spacing:-.5px">АТЕЛЬЕ</div>
+  <div style="font-size:30px;font-weight:800;color:var(--ac);letter-spacing:-.5px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif">АТЕЛЬЕ</div>
   <div class="ld-row"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
-  <div style="font-size:12px;color:var(--dm)">загрузка…</div>
+  <div style="font-size:12px;color:var(--dm);letter-spacing:.3px">загрузка…</div>
 </div>
 <div id="app" style="display:none"></div>
 <div class="toast" id="toast"></div>
 <datalist id="prod_list"></datalist>
-<div id="picker_modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:flex-end">
-  <div style="background:#F2F2F7;border-radius:24px 24px 0 0;width:100%;max-width:480px;margin:0 auto;height:80vh;display:flex;flex-direction:column">
-    <div style="padding:16px 20px 10px;display:flex;align-items:center;gap:12px;background:#fff;border-radius:24px 24px 0 0;border-bottom:1px solid #E5E5EA">
+<div id="picker_modal" style="display:none;position:fixed;inset:0;background:rgba(20,24,50,.40);backdrop-filter:blur(6px);z-index:300;align-items:flex-end">
+  <div style="background:var(--s1);border-radius:28px 28px 0 0;width:100%;max-width:480px;margin:0 auto;height:80vh;display:flex;flex-direction:column;box-shadow:0 -4px 32px var(--sh)">
+    <div style="padding:16px 20px 10px;display:flex;align-items:center;gap:12px;background:var(--s1);border-radius:28px 28px 0 0;border-bottom:1px solid var(--bd)">
       <input id="picker_search" type="search" placeholder="Поиск изделия…"
-        style="flex:1;background:#F2F2F7;border:none;border-radius:10px;padding:10px 14px;font-size:16px;color:#1C1C1E;outline:none;-webkit-appearance:none"
+        style="flex:1;background:var(--s2);border:1.5px solid transparent;border-radius:12px;padding:10px 14px;font-size:16px;color:var(--tx);outline:none;-webkit-appearance:none;transition:border-color .2s"
         oninput="filterPicker(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off">
-      <button onclick="closeProductPicker()" style="background:none;border:none;color:#007AFF;font-size:16px;cursor:pointer;padding:4px;white-space:nowrap">Отмена</button>
+      <button onclick="closeProductPicker()" style="background:none;border:none;color:var(--ac);font-size:16px;cursor:pointer;padding:4px;white-space:nowrap;font-weight:500">Отмена</button>
     </div>
     <div id="picker_list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
   </div>
@@ -549,20 +561,23 @@ function render(){
 
 // ═══ HOME ════════════════════════════════════════════════════════
 function buildHome(){
-  return`<div class="scr" style="justify-content:center;align-items:center;padding:30px 20px;min-height:100vh">
-    <div style="text-align:center;margin-bottom:36px">
-      <div style="font-size:34px;font-weight:700;color:var(--tx);letter-spacing:-.5px">АТЕЛЬЕ</div>
-      <div style="font-size:14px;color:var(--dm);margin-top:4px;font-weight:400">freak-butik · учёт выпуска</div>
+  return`<div class="scr" style="justify-content:center;align-items:center;padding:30px 20px;min-height:100vh;background:var(--bg)">
+    <div style="text-align:center;margin-bottom:40px">
+      <div style="font-size:13px;font-weight:700;letter-spacing:2px;color:var(--dm);text-transform:uppercase;margin-bottom:10px">ДОБРЫЙ ДЕНЬ</div>
+      <div style="font-size:36px;font-weight:800;color:var(--tx);letter-spacing:-.8px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif">Ателье</div>
+      <div style="font-size:14px;color:var(--dm);margin-top:6px;font-weight:400">freak-butik · учёт выпуска</div>
     </div>
     <div style="width:100%;max-width:380px">
-      <div class="fg"><label class="lbl">Телефон</label>
-        <input class="inp" type="tel" id="lph" placeholder="79001234567" inputmode="numeric" autocomplete="tel">
+      <div style="background:var(--s1);border-radius:24px;padding:24px 20px;box-shadow:0 4px 16px var(--sh2),0 16px 40px var(--sh);border:1px solid rgba(220,225,248,.5);margin-bottom:14px">
+        <div class="fg"><label class="lbl">Телефон</label>
+          <input class="inp" type="tel" id="lph" placeholder="79001234567" inputmode="numeric" autocomplete="tel">
+        </div>
+        <div class="fg" style="margin-bottom:0"><label class="lbl">Пароль</label>
+          <input class="inp" type="password" id="lpw" placeholder="••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
       </div>
-      <div class="fg"><label class="lbl">Пароль</label>
-        <input class="inp" type="password" id="lpw" placeholder="••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div id="lerr" style="color:var(--ac);font-size:13px;margin-bottom:12px;display:none"></div>
-      <button class="btn" onclick="doLogin()">ВОЙТИ</button>
+      <div id="lerr" style="color:var(--red);font-size:13px;margin-bottom:10px;display:none;text-align:center"></div>
+      <button class="btn" onclick="doLogin()">Войти</button>
       <button class="btn-ghost" onclick="S.view='pin';render()">👑 &nbsp;Администратор</button>
     </div>
   </div>`;
