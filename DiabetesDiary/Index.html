@@ -1147,7 +1147,7 @@ function submitEdit() {
   }
   const btn = document.getElementById('edit-submit');
   btn.disabled = true; btn.textContent = 'Сохранение…';
-  const type = S.editType==='ins' ? 'insulin' : S.editType;
+  const type = S.editType==='ins' ? 'insulin' : S.editType==='sug' ? 'sugar' : S.editType;
   google.script.run.withSuccessHandler(r => {
     btn.disabled = false; btn.textContent = 'Сохранить изменения';
     if (r.ok) { Object.keys(_jCache).forEach(k => delete _jCache[k]); toast('✅ Обновлено'); setTimeout(() => go('s-journal'), 600); }
@@ -1161,7 +1161,7 @@ function confirmDelete() {
     if (r.ok) { Object.keys(_jCache).forEach(k => delete _jCache[k]); toast('🗑️ Запись удалена'); go('s-journal'); }
     else toast('❌ '+r.error);
   }).withFailureHandler(() => toast('❌ Ошибка удаления'))
-  .deleteRecord(S.editType==='ins' ? 'insulin' : S.editType, S.editId);
+  .deleteRecord(S.editType==='ins' ? 'insulin' : S.editType==='sug' ? 'sugar' : S.editType, S.editId);
 }
 
 /* ═══════════ 30-DAY REPORT ════════════════════════════════════════════ */
