@@ -1576,6 +1576,7 @@ function buildAdmin(){
 let _adminTab='summary';
 function switchAdminTab(t){
   _adminTab=t;
+  _saveSession();
   document.querySelectorAll('#admin_tabs .tab').forEach((el,i)=>{
     el.className='tab '+(['summary','employees','catalog','print'][i]===t?'on':'');
   });
@@ -2543,6 +2544,7 @@ function _applyData(data){
 }
 function _renderAll(){
   _restoreSession();
+  if(S.view!=='home')_saveSession();
   $('loader').style.display='none';
   $('app').style.display='';
   render();
