@@ -133,7 +133,11 @@ function dispatch(req) {
           updRow('_deliveries', req.delivId, {qty:remQty, total:remTotal});
         }
         // Create defect delivery (batch.qty_delivered stays the same)
-        var nowWk=wkL(getMon());
+        var _now=new Date();
+        var _day=_now.getDay();var _diff=_day===0?-6:1-_day;
+        var _mon=new Date(_now);_mon.setDate(_now.getDate()+_diff);_mon.setHours(0,0,0,0);
+        var _MO=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+        var nowWk=_mon.getDate()+' '+_MO[_mon.getMonth()]+' '+_mon.getFullYear();
         addRow('_deliveries',{id:req.defectDelivId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,total:defectTotal,week:nowWk,order_coeff:deliv.order_coeff||1,is_defect:'TRUE',created_at:new Date().toISOString()});
         addRow('_defect_logs',{id:req.logId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,product:batch.product||'',week:nowWk,created_at:new Date().toISOString()});
         return {ok:true, pricePerItem:pricePerItem};
