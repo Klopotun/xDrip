@@ -909,25 +909,84 @@ function buildPieceBatches(u){
 
 // ── POSITIONS (Nastya) ────────────────────────
 function buildPositions(u){
-  const pos=S.batches.filter(b=>String(b.tailor_id)===String(u.id)&&b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total));
-  if(!pos.length)return`<div class="empty"><div style="font-size:36px;margin-bottom:12px">📋</div><div>Нет активных позиций</div></div>`;
-  return pos.map(b=>{
-    const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
-    const pct=Math.round((Number(b.qty_delivered||0)/Number(b.qty_total))*100);
-    const _bg=batchBg(b);
-    return`<div class="card" ${_bg?`style="background:${_bg};border-color:${_bg}"`:''}> 
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:15px;margin-bottom:2px">${b.product}</div>
-          <div style="font-size:12px;color:var(--dm)">${b.size||'б/р'} · ${b.order_type||''}</div>
-          ${b.note?`<div style="font-size:12px;color:var(--dm);margin-top:2px">${b.note}</div>`:''}
-          <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
-          <div style="font-size:11px;color:var(--dm);margin-top:5px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · осталось <strong>${rem}</strong></div>
-        </div>
-        <button class="btn-sm" onclick="openDeliverModal('${b.id}')">Сдать</button>
-      </div>
+  const wkOpts=WEEKS.map(w=>`<option value="${w}" ${w===S.week?'selected':''}>${w}</option>`).join('');
+  // Active positions not fully delivered
+  const pos=S.batches.filter(b=>String(b.tailor_id)===String(u.id)&&(b.is_position==='TRUE'||b.is_position===true)&&Number(b.qty_delivered||0)<Number(b.qty_total));
+  // Deliveries this week for position batches
+  const posDelivs=S.deliveries.filter(d=>{
+    if(String(d.tailor_id)!==String(u.id))return false;
+    if(d.is_defect==='TRUE'||d.is_defect===true)return false;
+    if(normWeek(d.week)!==normWeek(S.week))return false;
+    const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+    return b&&(b.is_position==='TRUE'||b.is_position===true);
+  });
+  // Defect deliveries for position batches
+  const defectDelivs=S.deliveries.filter(d=>{
+    if(String(d.tailor_id)!==String(u.id))return false;
+    if(!(d.is_defect==='TRUE'||d.is_defect===true))return false;
+    const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+    return b&&(b.is_position==='TRUE'||b.is_position===true);
+  });
+
+  let html=`<div>
+    <div class="fg"><label class="lbl">Неделя</label>
+      <select class="inp" onchange="S.week=this.value;renderTailorContent()">${wkOpts}</select>
     </div>`;
-  }).join('');
+
+  if(pos.length){
+    html+='<div class="sec-title">🔴 В работе</div>';
+    html+=pos.map(b=>{
+      const rem=Number(b.qty_total)-(Number(b.qty_delivered)||0);
+      const pct=Math.round((Number(b.qty_delivered||0)/Number(b.qty_total))*100);
+      const _bg=batchBg(b);
+      return`<div class="card" ${_bg?`style="background:${_bg}"`:''}>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:15px;margin-bottom:2px">${b.product}</div>
+            <div style="font-size:12px;color:var(--dm)">${b.size||'б/р'}${b.order_type?' · '+b.order_type:''}</div>
+            ${b.note?`<div style="font-size:12px;color:var(--dm);margin-top:2px">${b.note}</div>`:''}
+            ${b.created_at?`<div style="font-size:11px;color:var(--dm)">📅 выдана: ${fmtDT(b.created_at)}</div>`:''}
+            <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+            <div style="font-size:11px;color:var(--dm);margin-top:5px">сдано ${Number(b.qty_delivered)||0} из ${Number(b.qty_total)} · осталось <strong style="color:var(--red)">${rem}</strong></div>
+          </div>
+          <button class="btn-sm" onclick="openDeliverModal('${b.id}')">Сдать</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  if(posDelivs.length){
+    html+='<div class="sec-title">✅ Сдано за неделю</div>';
+    html+=posDelivs.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).map(d=>{
+      const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+      return`<div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">
+        <div>
+          <div style="font-weight:600;font-size:14px">${b?.product||'—'}</div>
+          <div style="font-size:12px;color:var(--dm)">${b?.size||'б/р'} · ${d.qty} шт</div>
+          ${d.created_at?`<div style="font-size:11px;color:var(--dm)">${fmtDT(d.created_at)}</div>`:''}
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--dm)">${d.qty} шт</div>
+      </div>`;
+    }).join('');
+  }
+
+  if(defectDelivs.length){
+    html+='<div class="sec-title" style="color:var(--orange)">🗑 Брак</div>';
+    html+=defectDelivs.map(d=>{
+      const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
+      return`<div class="card" style="border-left:3px solid var(--orange);padding:10px 14px">
+        <div style="font-weight:600;font-size:14px;color:var(--orange)">${b?.product||'—'}</div>
+        <div style="font-size:12px;color:var(--dm)">${b?.size||'б/р'} · ${d.qty} шт</div>
+      </div>`;
+    }).join('');
+  }
+
+  if(!pos.length&&!posDelivs.length&&!defectDelivs.length){
+    html+='<div class="empty"><div style="font-size:36px;margin-bottom:12px">📋</div><div>Нет позиций</div></div>';
+  }
+
+  html+='</div>';
+  return html;
 }
 
 // ── DAILY FORM ────────────────────────────────
