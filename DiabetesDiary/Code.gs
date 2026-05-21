@@ -24,9 +24,7 @@ function getSheet(name) {
     if (headers[name]) {
       sheet.appendRow(headers[name]);
       sheet.getRange(1, 1, 1, headers[name].length)
-        .setFontWeight('bold')
-        .setBackground('#4A90D9')
-        .setFontColor('white');
+        .setFontWeight('bold').setBackground('#4A90D9').setFontColor('white');
     }
   }
   return sheet;
@@ -36,11 +34,45 @@ function makeId() {
   return String(Date.now()) + String(Math.floor(Math.random() * 1000));
 }
 
+// ── Cache helpers ─────────────────────────────────────────────────────────────
+// A version key is stored in cache; every write bumps the version so all
+// prior summary entries become unreachable (they expire on their own 5-min TTL).
+
+function _c() { try { return CacheService.getUserCache(); } catch(e) { return null; } }
+
+function _invalidateCache() {
+  const c = _c();
+  if (c) c.put('v', String(Date.now()), 21600);
+}
+
+function _getCached(suffix) {
+  const c = _c();
+  if (!c) return null;
+  try {
+    const raw = c.get('d_' + (c.get('v') || '0') + '_' + suffix);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function _setCached(suffix, data) {
+  const c = _c();
+  if (!c) return;
+  try { c.put('d_' + (c.get('v') || '0') + '_' + suffix, JSON.stringify(data), 300); } catch(e) {}
+}
+
+// ── Row helper: read up to `limit` most recent data rows (no header) ─────────
+
+function _rows(sheet, numCols, limit) {
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  const from = Math.max(2, last - limit + 1);
+  return sheet.getRange(from, 1, last - from + 1, numCols).getValues();
+}
+
 // ── Settings ─────────────────────────────────────────────────────────────────
 
 function getSetting(key) {
-  const sheet = getSheet('Настройки');
-  const rows = sheet.getDataRange().getValues();
+  const rows = getSheet('Настройки').getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === key) return rows[i][1];
   }
@@ -49,12 +81,9 @@ function getSetting(key) {
 
 function setSetting(key, value) {
   const sheet = getSheet('Настройки');
-  const rows = sheet.getDataRange().getValues();
+  const rows  = sheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] === key) {
-      sheet.getRange(i + 1, 2).setValue(value);
-      return;
-    }
+    if (rows[i][0] === key) { sheet.getRange(i + 1, 2).setValue(value); return; }
   }
   sheet.appendRow([key, value]);
 }
@@ -62,8 +91,10 @@ function setSetting(key, value) {
 // ── API: Get last insulin info ───────────────────────────────────────────────
 
 function getLastInsulinInfo() {
+  const hit = _getCached('lastIns');
+  if (hit) return hit;
   try {
-    return {
+    const result = {
       lastSite:      getSetting('lastSite')      || '',
       lastLongDose:  getSetting('lastLongDose')  || 0,
       lastShortDose: getSetting('lastShortDose') || 0,
@@ -71,14 +102,16 @@ function getLastInsulinInfo() {
       lastShortName: getSetting('lastShortName') || 'Болюс',
       needleCount:   getSetting('needleCount')   || 0
     };
+    _setCached('lastIns', result);
+    return result;
   } catch(e) {
-    return { lastSite: '', lastLongDose: 0, lastShortDose: 0,
-             lastLongName: 'Базальный', lastShortName: 'Болюс', needleCount: 0 };
+    return { lastSite:'', lastLongDose:0, lastShortDose:0,
+             lastLongName:'Базальный', lastShortName:'Болюс', needleCount:0 };
   }
 }
 
 function resetNeedle() {
-  try { setSetting('needleCount', 0); return { ok: true }; }
+  try { setSetting('needleCount', 0); _invalidateCache(); return { ok: true }; }
   catch(e) { return { ok: false, error: String(e) }; }
 }
 
@@ -88,15 +121,9 @@ function saveInsulin(data) {
   try {
     const id = makeId();
     getSheet('Инсулин').appendRow([
-      id,
-      data.time,
-      data.insulinType,
-      data.insulinName,
-      Number(data.units),
-      data.site,
-      data.notes || ''
+      id, data.time, data.insulinType, data.insulinName,
+      Number(data.units), data.site, data.notes || ''
     ]);
-
     setSetting('lastSite', data.site);
     setSetting('needleCount', (parseInt(getSetting('needleCount')) || 0) + 1);
     if (data.insulinType === 'long') {
@@ -106,11 +133,9 @@ function saveInsulin(data) {
       setSetting('lastShortDose', Number(data.units));
       setSetting('lastShortName', data.insulinName);
     }
-
-    return { ok: true, id: id };
-  } catch(e) {
-    return { ok: false, error: String(e) };
-  }
+    _invalidateCache();
+    return { ok: true, id };
+  } catch(e) { return { ok: false, error: String(e) }; }
 }
 
 // ── API: Save food ───────────────────────────────────────────────────────────
@@ -119,17 +144,12 @@ function saveFood(data) {
   try {
     const id = makeId();
     getSheet('Еда').appendRow([
-      id,
-      data.time,
-      Number(data.he),
-      data.description || '',
-      data.sugarBefore  || '',
-      ''
+      id, data.time, Number(data.he), data.description || '',
+      data.sugarBefore || '', ''
     ]);
-    return { ok: true, id: id };
-  } catch(e) {
-    return { ok: false, error: String(e) };
-  }
+    _invalidateCache();
+    return { ok: true, id };
+  } catch(e) { return { ok: false, error: String(e) }; }
 }
 
 // ── API: Save sugar ──────────────────────────────────────────────────────────
@@ -138,148 +158,111 @@ function saveSugar(data) {
   try {
     const id = makeId();
     getSheet('Сахар').appendRow([
-      id,
-      data.time,
-      Number(data.value),
-      data.sugarType || 'manual',
-      data.foodId    || ''
+      id, data.time, Number(data.value), data.sugarType || 'manual', data.foodId || ''
     ]);
-
     if (data.foodId) {
       const sheet = getSheet('Еда');
       const rows  = sheet.getDataRange().getValues();
       for (let i = 1; i < rows.length; i++) {
         if (String(rows[i][0]) === String(data.foodId)) {
-          sheet.getRange(i + 1, 6).setValue(id);
-          break;
+          sheet.getRange(i + 1, 6).setValue(id); break;
         }
       }
     }
+    _invalidateCache();
+    return { ok: true, id };
+  } catch(e) { return { ok: false, error: String(e) }; }
+}
 
-    return { ok: true, id: id };
-  } catch(e) {
-    return { ok: false, error: String(e) };
-  }
+// ── Time normalizer (reused in summary functions) ─────────────────────────────
+
+function _normTime(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value.toISOString();
+  const d = new Date(value);
+  return !isNaN(d.getTime()) ? d.toISOString() : String(value);
 }
 
 // ── API: Summary for a date ──────────────────────────────────────────────────
-// dateStr  : "YYYY-MM-DD" local date label (for reference only)
-// startISO : UTC ISO string for local-day midnight  (new Date(yr,mo-1,dy).toISOString())
-// endISO   : UTC ISO string for local-day 23:59:59  (new Date(yr,mo-1,dy,23,59,59,999).toISOString())
-// ISO string comparison is lexicographic = chronological for UTC ISO strings.
+// dateStr  : "YYYY-MM-DD" local date label
+// startISO : UTC ISO for local-day start  (new Date(yr,mo-1,dy).toISOString())
+// endISO   : UTC ISO for local-day end    (new Date(yr,mo-1,dy,23,59,59,999).toISOString())
 
 function getSummary(dateStr, startISO, endISO) {
   try {
-    if (!startISO || !endISO) {
-      return { ok: false, error: 'Не переданы startISO / endISO' };
-    }
+    if (!startISO || !endISO) return { ok:false, error:'Не переданы startISO / endISO' };
+
+    const hit = _getCached('sum_' + dateStr);
+    if (hit) return hit;
 
     const result = {
-      ok: true,
-      insulin: [],
-      food: [],
-      sugar: [],
-      totalInsulin: 0,
-      totalLong: 0,
-      totalShort: 0,
-      totalHE: 0,
-      avgSugar: null
+      ok:true, insulin:[], food:[], sugar:[],
+      totalInsulin:0, totalLong:0, totalShort:0, totalHE:0, avgSugar:null
     };
 
-    function normalizeTime(value) {
-      if (!value) return '';
-      if (value instanceof Date) return value.toISOString();
-      const d = new Date(value);
-      if (!isNaN(d.getTime())) return d.toISOString();
-      return String(value);
-    }
+    function inRange(iso) { return iso && iso >= startISO && iso <= endISO; }
 
-    function inRange(iso) {
-      return iso && iso >= startISO && iso <= endISO;
-    }
-
-    // Инсулин
-    let rows = getSheet('Инсулин').getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
+    let rows = _rows(getSheet('Инсулин'), 7, 500);
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = normalizeTime(r[1]);
+      const iso = _normTime(r[1]);
       if (!inRange(iso)) continue;
       const units = Number(r[4]) || 0;
-      result.insulin.push({
-        id:          String(r[0]),
-        time:        iso,
-        insulinType: String(r[2] || ''),
-        insulinName: String(r[3] || ''),
-        units:       units,
-        site:        String(r[5] || ''),
-        notes:       String(r[6] || '')
-      });
+      result.insulin.push({ id:String(r[0]), time:iso, insulinType:String(r[2]||''),
+        insulinName:String(r[3]||''), units, site:String(r[5]||''), notes:String(r[6]||'') });
       result.totalInsulin += units;
-      if (r[2] === 'long') result.totalLong += units;
-      else                 result.totalShort += units;
+      if (r[2] === 'long') result.totalLong += units; else result.totalShort += units;
     }
 
-    // Еда
-    rows = getSheet('Еда').getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
+    rows = _rows(getSheet('Еда'), 6, 500);
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = normalizeTime(r[1]);
+      const iso = _normTime(r[1]);
       if (!inRange(iso)) continue;
       const he = Number(r[2]) || 0;
-      result.food.push({
-        id:          String(r[0]),
-        time:        iso,
-        he:          he,
-        description: String(r[3] || ''),
-        sugarBefore: r[4] || '',
-        sugarAfterId: String(r[5] || '')
-      });
+      result.food.push({ id:String(r[0]), time:iso, he,
+        description:String(r[3]||''), sugarBefore:r[4]||'', sugarAfterId:String(r[5]||'') });
       result.totalHE += he;
     }
 
-    // Сахар
-    rows = getSheet('Сахар').getDataRange().getValues();
+    rows = _rows(getSheet('Сахар'), 5, 500);
     let sugarSum = 0, sugarCnt = 0;
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = normalizeTime(r[1]);
+      const iso = _normTime(r[1]);
       if (!inRange(iso)) continue;
       const value = Number(r[2]);
-      result.sugar.push({
-        id:        String(r[0]),
-        time:      iso,
-        value:     value,
-        sugarType: String(r[3] || 'manual'),
-        foodId:    String(r[4] || '')
-      });
+      result.sugar.push({ id:String(r[0]), time:iso, value,
+        sugarType:String(r[3]||'manual'), foodId:String(r[4]||'') });
       if (!isNaN(value) && value > 0) { sugarSum += value; sugarCnt++; }
     }
 
     result.avgSugar = sugarCnt ? sugarSum / sugarCnt : null;
+    _setCached('sum_' + dateStr, result);
     return result;
+  } catch(e) { return { ok:false, error: e && e.stack ? e.stack : String(e) }; }
+}
 
-  } catch (e) {
-    return { ok: false, error: e && e.stack ? e.stack : String(e) };
-  }
+// ── API: Combined main-screen data — one round-trip instead of two ───────────
+
+function getMainScreenData(dateStr, startISO, endISO) {
+  return {
+    summary: getSummary(dateStr, startISO, endISO),
+    pending: getPendingSugars()
+  };
 }
 
 // ── API: Update record ───────────────────────────────────────────────────────
 
 function updateRecord(type, id, patch) {
   try {
-    const sheetNames = { insulin: 'Инсулин', food: 'Еда', sugar: 'Сахар' };
+    const sheetNames = { insulin:'Инсулин', food:'Еда', sugar:'Сахар' };
     const sheet = getSheet(sheetNames[type]);
     const rows  = sheet.getDataRange().getValues();
-
     for (let i = 1; i < rows.length; i++) {
       if (String(rows[i][0]) !== String(id)) continue;
-
       const row = i + 1;
       if (patch.time) sheet.getRange(row, 2).setValue(patch.time);
-
       if (type === 'insulin') {
         if (patch.insulinType !== undefined) sheet.getRange(row, 3).setValue(patch.insulinType);
         if (patch.insulinName !== undefined) sheet.getRange(row, 4).setValue(patch.insulinName);
@@ -293,83 +276,62 @@ function updateRecord(type, id, patch) {
       } else if (type === 'sugar') {
         if (patch.value !== undefined) sheet.getRange(row, 3).setValue(Number(patch.value));
       }
-
+      _invalidateCache();
       return { ok: true };
     }
-    return { ok: false, error: 'Запись не найдена' };
-  } catch(e) {
-    return { ok: false, error: String(e) };
-  }
+    return { ok:false, error:'Запись не найдена' };
+  } catch(e) { return { ok:false, error:String(e) }; }
 }
 
 // ── API: Delete record ───────────────────────────────────────────────────────
 
 function deleteRecord(type, id) {
   try {
-    const sheetNames = { insulin: 'Инсулин', food: 'Еда', sugar: 'Сахар' };
+    const sheetNames = { insulin:'Инсулин', food:'Еда', sugar:'Сахар' };
     const sheet = getSheet(sheetNames[type]);
     const rows  = sheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
       if (String(rows[i][0]) === String(id)) {
-        sheet.deleteRow(i + 1);
-        return { ok: true };
+        sheet.deleteRow(i + 1); _invalidateCache(); return { ok:true };
       }
     }
-    return { ok: false, error: 'Запись не найдена' };
-  } catch(e) {
-    return { ok: false, error: String(e) };
-  }
+    return { ok:false, error:'Запись не найдена' };
+  } catch(e) { return { ok:false, error:String(e) }; }
 }
 
 // ── API: 30-day summary (raw records, client aggregates per day) ─────────────
 
 function getSummary30(startISO, endISO) {
   try {
-    if (!startISO || !endISO) return { ok: false, error: 'Не переданы startISO / endISO' };
-
-    function normalizeTime(value) {
-      if (!value) return '';
-      if (value instanceof Date) return value.toISOString();
-      const d = new Date(value);
-      if (!isNaN(d.getTime())) return d.toISOString();
-      return String(value);
-    }
+    if (!startISO || !endISO) return { ok:false, error:'Не переданы startISO / endISO' };
     function inRange(iso) { return iso && iso >= startISO && iso <= endISO; }
 
-    const result = { ok: true, insulin: [], food: [], sugar: [] };
+    const result = { ok:true, insulin:[], food:[], sugar:[] };
 
-    let rows = getSheet('Инсулин').getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
+    let rows = _rows(getSheet('Инсулин'), 7, 3000);
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = normalizeTime(r[1]);
+      const iso = _normTime(r[1]);
       if (!inRange(iso)) continue;
-      result.insulin.push({ time: iso, insulinType: String(r[2] || ''), units: Number(r[4]) || 0 });
+      result.insulin.push({ time:iso, insulinType:String(r[2]||''), units:Number(r[4])||0 });
     }
-
-    rows = getSheet('Еда').getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
+    rows = _rows(getSheet('Еда'), 6, 3000);
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = normalizeTime(r[1]);
+      const iso = _normTime(r[1]);
       if (!inRange(iso)) continue;
-      result.food.push({ time: iso, he: Number(r[2]) || 0 });
+      result.food.push({ time:iso, he:Number(r[2])||0 });
     }
-
-    rows = getSheet('Сахар').getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
+    rows = _rows(getSheet('Сахар'), 5, 3000);
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = normalizeTime(r[1]);
+      const iso = _normTime(r[1]);
       if (!inRange(iso)) continue;
       const value = Number(r[2]);
-      if (!isNaN(value)) result.sugar.push({ time: iso, value });
+      if (!isNaN(value)) result.sugar.push({ time:iso, value });
     }
-
     return result;
-  } catch(e) {
-    return { ok: false, error: e && e.stack ? e.stack : String(e) };
-  }
+  } catch(e) { return { ok:false, error: e && e.stack ? e.stack : String(e) }; }
 }
 
 // ── API: Pending after-meal sugar reminders ──────────────────────────────────
@@ -380,23 +342,18 @@ function getPendingSugars() {
     const twoHoursMs   = 2 * 3600000;
     const threeHoursMs = 3 * 3600000;
 
-    const foodRows = getSheet('Еда').getDataRange().getValues();
-    const pending  = [];
-
-    for (let i = 1; i < foodRows.length; i++) {
-      const r = foodRows[i];
+    const pending = [];
+    const rows = _rows(getSheet('Еда'), 6, 500);
+    for (const r of rows) {
       if (!r[0]) continue;
-      const iso = r[1] instanceof Date ? r[1].toISOString() : String(r[1]);
+      const iso      = r[1] instanceof Date ? r[1].toISOString() : String(r[1]);
       const mealTime = new Date(iso).getTime();
       if (isNaN(mealTime)) continue;
       const elapsed = now - mealTime;
-      // Meal was 2–4.5 hours ago and has no after-meal sugar linked
       if (elapsed >= twoHoursMs && elapsed <= threeHoursMs * 1.5 && !r[5]) {
-        pending.push({ id: String(r[0]), time: iso, he: r[2], description: r[3] });
+        pending.push({ id:String(r[0]), time:iso, he:r[2], description:r[3] });
       }
     }
-    return { ok: true, pending };
-  } catch(e) {
-    return { ok: false, pending: [] };
-  }
+    return { ok:true, pending };
+  } catch(e) { return { ok:false, pending:[] }; }
 }
