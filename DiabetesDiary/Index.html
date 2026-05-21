@@ -356,6 +356,16 @@ canvas#report-chart { width:100%; border-radius:12px; display:block; }
 .leg { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); font-weight:500; }
 .leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 canvas#main-chart { width:100%; border-radius:12px; display:block; }
+.chart-zoom-row { display:flex; align-items:center; gap:8px; justify-content:center; margin-top:8px; }
+.zoom-btn {
+  width:30px; height:30px; border-radius:50%; border:none; cursor:pointer;
+  font-size:18px; font-weight:400; color:var(--accent); line-height:1;
+  background:var(--bg); box-shadow: 3px 3px 8px var(--sd), -3px -3px 8px var(--sl);
+  display:flex; align-items:center; justify-content:center;
+  transition: box-shadow .13s, transform .12s;
+}
+.zoom-btn:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); transform:scale(.92); }
+.zoom-lbl { font-size:12px; font-weight:700; color:var(--muted); min-width:30px; text-align:center; }
 </style>
 </head>
 <body>
@@ -377,10 +387,15 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
         <div class="leg"><div class="leg-dot" style="background:#F5A77A"></div>Сахар</div>
         <div class="leg"><div class="leg-dot" style="background:#7B8FFF"></div>Апидра</div>
         <div class="leg"><div class="leg-dot" style="background:#A78BFA"></div>Левемир</div>
-        <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>Всасывание</div>
+        <div class="leg"><div class="leg-dot" style="background:#6DC99A"></div>Еда</div>
       </div>
     </div>
     <canvas id="main-chart" height="120"></canvas>
+    <div class="chart-zoom-row">
+      <button class="zoom-btn" onclick="zoomChart(-1)">−</button>
+      <span class="zoom-lbl" id="zoom-lbl">24ч</span>
+      <button class="zoom-btn" onclick="zoomChart(1)">+</button>
+    </div>
   </div>
 
   <div class="reminder" id="reminder" onclick="onReminderClick()">
@@ -666,6 +681,19 @@ const S = {
 
 // Client-side journal cache: dateStr → {data, ts}
 const _jCache = {};
+
+let chartZoom = 24;            // visible window in hours: 6 | 12 | 24
+let _chartData = {insulin:[],food:[],sugar:[]};
+const ZOOM_LEVELS = [6, 12, 24];
+
+function zoomChart(dir) {
+  // dir = 1 → zoom in (fewer hours); dir = -1 → zoom out (more hours)
+  const idx    = ZOOM_LEVELS.indexOf(chartZoom);
+  const newIdx = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, idx - dir));
+  chartZoom = ZOOM_LEVELS[newIdx];
+  document.getElementById('zoom-lbl').textContent = chartZoom + 'ч';
+  drawChart(_chartData);
+}
 
 /* ═══════════ TIME ═════════════════════════════════════════════════════ */
 // All times use the device's own clock and timezone.
@@ -1031,7 +1059,7 @@ function _renderJournal(r) {
   (r.insulin||[]).forEach(function(x) { all.push(Object.assign({},x,{cat:'ins'})); });
   (r.food||[]).forEach(function(x)    { all.push(Object.assign({},x,{cat:'food'})); });
   (r.sugar||[]).forEach(function(x)   { all.push(Object.assign({},x,{cat:'sug'})); });
-  all.sort(function(a,b) { return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; });
+  all.sort(function(a,b) { return a.time > b.time ? -1 : a.time < b.time ? 1 : 0; });
   if (!all.length) { showJEmpty(); return; }
   document.getElementById('j-content').style.display = 'block';
   var tl = document.getElementById('tl'); tl.innerHTML = '';
@@ -1362,6 +1390,7 @@ function carbAbsorption(t_h, he, isFatty) {
 /* ═══════════ MAIN CHART ═══════════════════════════════════════════════ */
 
 function drawChart(data) {
+  _chartData = data;
   const canvas = document.getElementById('main-chart');
   if (!canvas) return;
 
@@ -1377,35 +1406,45 @@ function drawChart(data) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
-  const PAD = {l:26, r:6, t:5, b:17};
-  const GH  = 54;
-  const AH  = 18;
-  const GAP = 4;
-  const GT  = PAD.t;
-  const AT  = GT + GH + GAP;
-  const CW  = W - PAD.l - PAD.r;
+  const PAD    = {l:26, r:6, t:5, b:17};
+  const GH     = H - PAD.t - PAD.b;
+  const GT     = PAD.t;
+  const CW     = W - PAD.l - PAD.r;
+  const maxPKH = GH * 0.30;  // PK curves occupy bottom 30% of chart
 
   const today = todayLocal();
   const [yr,mo,dy] = today.split('-').map(Number);
   const dayStartMs = new Date(yr, mo-1, dy, 0, 0, 0, 0).getTime();
-  const dayMs = 24*3600000;
+  const dayMs  = 24 * 3600000;
+  const nowMs  = Date.now();
 
-  function xOf(ms)  { return PAD.l + Math.max(0, Math.min(1,(ms-dayStartMs)/dayMs)) * CW; }
-  function xOfH(h)  { return PAD.l + (h/24)*CW; }
+  // Zoom window: ends at now+1h (capped at end of day), spans chartZoom hours back
+  const windowEnd   = Math.min(dayStartMs + dayMs, nowMs + 3600000);
+  const windowStart = Math.max(dayStartMs, windowEnd - chartZoom * 3600000);
+  const windowDur   = windowEnd - windowStart;
 
-  ctx.strokeStyle = 'rgba(163,175,200,.16)';
-  ctx.lineWidth = 1;
-  [0,6,12,18,24].forEach(h => {
+  function xOf(ms)  { return PAD.l + Math.max(0, Math.min(1, (ms - windowStart) / windowDur)) * CW; }
+  function xOfH(h)  { return xOf(dayStartMs + h * 3600000); }
+
+  // Grid lines and labels at regular hour intervals
+  const labelStep  = chartZoom <= 6 ? 1 : chartZoom <= 12 ? 2 : 6;
+  const startHour  = Math.ceil((windowStart - dayStartMs) / 3600000);
+  const endHour    = Math.ceil((windowEnd   - dayStartMs) / 3600000);
+  ctx.strokeStyle  = 'rgba(163,175,200,.16)';
+  ctx.lineWidth    = 1;
+  for (let h = startHour; h <= endHour; h++) {
+    if (h % labelStep !== 0) continue;
     const x = xOfH(h);
-    ctx.beginPath(); ctx.moveTo(x, GT); ctx.lineTo(x, AT+AH); ctx.stroke();
-  });
+    ctx.beginPath(); ctx.moveTo(x, GT); ctx.lineTo(x, GT + GH); ctx.stroke();
+  }
 
-  const GMIN=2, GMAX=18;
-  function yGluc(v) { return GT + GH - ((v-GMIN)/(GMAX-GMIN))*GH; }
+  // Target glucose band
+  const GMIN = 2, GMAX = 18;
+  function yGluc(v) { return GT + GH - ((v - GMIN) / (GMAX - GMIN)) * GH; }
   ctx.fillStyle = 'rgba(109,201,154,.12)';
-  ctx.fillRect(PAD.l, yGluc(7.8), CW, yGluc(3.9)-yGluc(7.8));
-  ctx.strokeStyle='rgba(109,201,154,.35)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
-  [3.9,7.8].forEach(v => { ctx.beginPath(); ctx.moveTo(PAD.l,yGluc(v)); ctx.lineTo(PAD.l+CW,yGluc(v)); ctx.stroke(); });
+  ctx.fillRect(PAD.l, yGluc(7.8), CW, yGluc(3.9) - yGluc(7.8));
+  ctx.strokeStyle = 'rgba(109,201,154,.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+  [3.9, 7.8].forEach(v => { ctx.beginPath(); ctx.moveTo(PAD.l, yGluc(v)); ctx.lineTo(PAD.l + CW, yGluc(v)); ctx.stroke(); });
   ctx.setLineDash([]);
 
   const STEPS = 97;
@@ -1413,25 +1452,25 @@ function drawChart(data) {
   const iobL  = new Float32Array(STEPS);
   const iobF  = new Float32Array(STEPS);
 
-  (data.insulin||[]).forEach(inj => {
+  (data.insulin || []).forEach(inj => {
     const injMs     = new Date(inj.time).getTime();
     const dose      = parseFloat(inj.units) || 0;
     const isLong    = inj.insulinType === 'long';
-    const isAbdomen = ['sr','sl'].includes(inj.site);
-    for (let s=0; s<STEPS; s++) {
-      const t_h = ((dayStartMs + s*15*60000) - injMs) / 3600000;
+    const isAbdomen = ['sr', 'sl'].includes(inj.site);
+    for (let s = 0; s < STEPS; s++) {
+      const t_h = ((dayStartMs + s * 15 * 60000) - injMs) / 3600000;
       if (t_h < 0) continue;
       if (isLong) iobL[s] += levemirActivity(t_h, dose);
       else        iobA[s] += apidraActivity(t_h, dose, isAbdomen);
     }
   });
 
-  (data.food||[]).forEach(meal => {
-    const mealMs = new Date(meal.time).getTime();
-    const he     = parseFloat(meal.he) || 0;
+  (data.food || []).forEach(meal => {
+    const mealMs  = new Date(meal.time).getTime();
+    const he      = parseFloat(meal.he) || 0;
     const isFatty = he >= 3;
-    for (let s=0; s<STEPS; s++) {
-      const t_h = ((dayStartMs + s*15*60000) - mealMs) / 3600000;
+    for (let s = 0; s < STEPS; s++) {
+      const t_h = ((dayStartMs + s * 15 * 60000) - mealMs) / 3600000;
       if (t_h < 0) continue;
       iobF[s] += carbAbsorption(t_h, he, isFatty);
     }
@@ -1441,56 +1480,64 @@ function drawChart(data) {
   const peakL = Math.max(...iobL, 0);
   const peakF = Math.max(...iobF, 0);
   const maxI  = Math.max(20, Math.ceil(peakA), Math.ceil(peakL));
-  const maxF  = Math.max(4,  Math.ceil(peakF));
+  const maxF  = Math.max(4, Math.ceil(peakF));
 
+  // PK curves overlaid at the bottom of the glucose panel
   function drawPK(iob, maxV, color) {
     if (!iob.some(v => v > 0.01)) return;
     ctx.beginPath();
-    ctx.moveTo(xOfH(0), AT+AH);
-    for (let s=0; s<STEPS; s++) ctx.lineTo(xOfH(s*15/60), AT+AH - (iob[s]/maxV)*AH);
-    ctx.lineTo(xOfH(24), AT+AH); ctx.closePath();
+    ctx.moveTo(xOfH(0), GT + GH);
+    for (let s = 0; s < STEPS; s++) ctx.lineTo(xOfH(s * 15 / 60), GT + GH - (iob[s] / maxV) * maxPKH);
+    ctx.lineTo(xOfH(24), GT + GH); ctx.closePath();
     ctx.fillStyle = color; ctx.fill();
   }
   drawPK(iobF, maxF, 'rgba(109,201,154,.45)');
   drawPK(iobL, maxI, 'rgba(167,139,250,.42)');
   drawPK(iobA, maxI, 'rgba(123,143,255,.52)');
 
-  const sugarSorted = [...(data.sugar||[])].sort((a,b) => new Date(a.time) - new Date(b.time));
+  // Glucose line
+  const sugarSorted = [...(data.sugar || [])].sort((a, b) => new Date(a.time) - new Date(b.time));
   if (sugarSorted.length > 1) {
     ctx.beginPath();
-    sugarSorted.forEach((s,i) => {
-      const x=xOf(new Date(s.time).getTime()), y=yGluc(parseFloat(s.value));
-      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    sugarSorted.forEach((s, i) => {
+      const x = xOf(new Date(s.time).getTime()), y = yGluc(parseFloat(s.value));
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
-    ctx.strokeStyle='rgba(245,167,122,.80)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(245,167,122,.80)'; ctx.lineWidth = 2; ctx.stroke();
   }
+  // Glucose dots
   sugarSorted.forEach(s => {
-    const v=parseFloat(s.value);
-    const x=xOf(new Date(s.time).getTime()), y=yGluc(v);
-    ctx.beginPath(); ctx.arc(x,y,4,0,2*Math.PI);
-    ctx.fillStyle = v<3.9?'#DC2626': v<=7.8?'#22C55E': v<=11?'#F59E0B':'#EF4444';
+    const v = parseFloat(s.value);
+    const x = xOf(new Date(s.time).getTime()), y = yGluc(v);
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = v < 3.9 ? '#DC2626' : v <= 7.8 ? '#22C55E' : v <= 11 ? '#F59E0B' : '#EF4444';
     ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
     if (sugarSorted.length <= 8) {
-      ctx.fillStyle='#4A5370'; ctx.font=`9px -apple-system,sans-serif`;
-      ctx.textAlign='center'; ctx.fillText(v.toFixed(1), x, y-(v>GMAX-2?9:-6));
+      ctx.fillStyle = '#4A5370'; ctx.font = `9px -apple-system,sans-serif`;
+      ctx.textAlign = 'center'; ctx.fillText(v.toFixed(1), x, y - (v > GMAX - 2 ? 9 : -6));
     }
   });
 
-  ctx.fillStyle='#8E9BB8'; ctx.font=`9px -apple-system,sans-serif`; ctx.textAlign='center';
-  [0,6,12,18,24].forEach(h => ctx.fillText(pad(h)+':00', xOfH(h), H-4));
+  // Time labels
+  ctx.fillStyle = '#8E9BB8'; ctx.font = `9px -apple-system,sans-serif`; ctx.textAlign = 'center';
+  for (let h = startHour; h <= endHour; h++) {
+    if (h % labelStep !== 0) continue;
+    ctx.fillText(pad(h % 24) + ':00', xOfH(h), H - 4);
+  }
 
-  ctx.textAlign='right'; ctx.font=`9px -apple-system,sans-serif`;
-  [4,7,10,14].forEach(v => {
-    ctx.fillStyle = v>=3.9&&v<=7.8 ? '#6DC99A' : 'rgba(142,155,184,.6)';
-    ctx.fillText(v, PAD.l-3, yGluc(v)+3);
+  // Y-axis glucose labels
+  ctx.textAlign = 'right'; ctx.font = `9px -apple-system,sans-serif`;
+  [4, 7, 10, 14].forEach(v => {
+    ctx.fillStyle = v >= 3.9 && v <= 7.8 ? '#6DC99A' : 'rgba(142,155,184,.6)';
+    ctx.fillText(v, PAD.l - 3, yGluc(v) + 3);
   });
 
-  const nowMs = Date.now();
-  if (nowMs >= dayStartMs && nowMs <= dayStartMs+dayMs) {
+  // "Now" vertical line
+  if (nowMs >= windowStart && nowMs <= windowEnd) {
     const xNow = xOf(nowMs);
-    ctx.strokeStyle='rgba(123,143,255,.7)'; ctx.lineWidth=1; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(xNow, GT); ctx.lineTo(xNow, AT+AH); ctx.stroke();
+    ctx.strokeStyle = 'rgba(123,143,255,.7)'; ctx.lineWidth = 1; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(xNow, GT); ctx.lineTo(xNow, GT + GH); ctx.stroke();
   }
 }
 
