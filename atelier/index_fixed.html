@@ -652,6 +652,7 @@ function doLogin(){
   S.user=emp;
   S.view=(emp.is_admin==='TRUE'||emp.is_admin===true)?'tailor-admin':'tailor';
   S.tailorTab='batches';S.mixedTab='daily';S.taAdminMode=false;
+  _saveSession();
   render();
 }
 
@@ -679,7 +680,7 @@ function pinKey(k){
   S.pinVal+=k;render();
   if(S.pinVal.length===4){
     setTimeout(()=>{
-      if(S.pinVal===ADMIN_PIN){S.view='admin';S.pinVal='';render();}
+      if(S.pinVal===ADMIN_PIN){S.view='admin';S.pinVal='';_saveSession();render();}
       else{S.pinShake=true;S.pinVal='';render();setTimeout(()=>{S.pinShake=false;render();},400);}
     },120);
   }
@@ -705,7 +706,7 @@ function buildTailor(){
   return`<div class="scr">
     <div class="hdr">
       <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${normWeek(S.week)}</div></div>
-      <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
+      <button class="exit-btn" onclick="S.view='home';S.user=null;_clearSession();render()">выйти</button>
     </div>
     <div class="tabs" id="tailor_tabs">${tabs}</div>
     <div id="tailor_record"></div>
@@ -737,7 +738,7 @@ function buildTailorAdmin(){
       <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${normWeek(S.week)}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
         <button class="exit-btn" title="Синхронизировать" onclick="syncData()" style="font-size:18px;padding:2px 4px">⟳</button>
-        <button class="exit-btn" onclick="S.view='home';S.user=null;render()">выйти</button>
+        <button class="exit-btn" onclick="S.view='home';S.user=null;_clearSession();render()">выйти</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0;padding:6px 16px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(210,215,240,.6);flex-shrink:0;position:sticky;top:57px;z-index:9">
@@ -1484,7 +1485,7 @@ function buildAdmin(){
       <div class="hdr-t">АДМИНИСТРАТОР</div>
       <div style="display:flex;align-items:center;gap:10px">
         <button class="exit-btn" title="Синхронизировать с таблицей" onclick="syncData()" style="font-size:18px;padding:2px 4px">⟳</button>
-        <button class="exit-btn" onclick="S.view='home';render()">выйти</button>
+        <button class="exit-btn" onclick="S.view='home';_clearSession();render()">выйти</button>
       </div>
     </div>
     <div style="padding:10px 16px;border-bottom:1px solid var(--bd);background:var(--s1);display:flex;align-items:center;gap:10px;flex-shrink:0" id="admin_wk_bar">
@@ -1538,7 +1539,16 @@ function buildAdminSummary(){
     ?S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
     :S.deliveries.filter(d=>normWeek(d.week)===normWeek(S.week));
   const filterDelivs=allFilterDelivs.filter(d=>!(d.is_defect==='TRUE'||d.is_defect===true));
-  const filterDefectDelivs=allFilterDelivs.filter(d=>d.is_defect==='TRUE'||d.is_defect===true);
+  // Defects filtered by created_at (not week) — works for both old and new data
+  const _wkMon=parseWk(S.week);
+  const _wkSun=new Date(_wkMon.getTime()+7*24*60*60*1000);
+  const filterDefectDelivs=S.deliveries.filter(d=>{
+    if(!(d.is_defect==='TRUE'||d.is_defect===true))return false;
+    if(!d.created_at)return normWeek(d.week)===normWeek(S.week);
+    const cd=new Date(d.created_at);
+    if(isMonth)return cd.getFullYear()===selDate.getFullYear()&&cd.getMonth()===selDate.getMonth();
+    return cd>=_wkMon&&cd<_wkSun;
+  });
   const totItems=filterDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
   const totMoney=filterDelivs.reduce((s,d)=>s+Number(d.total||0),0);
   const totDefectItems=filterDefectDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
@@ -2431,6 +2441,20 @@ async function adminDelPayment(id){if(!confirm('Удалить выплату?')
 
 // ═══ INIT ════════════════════════════════════════════════════════
 const _CACHE_KEY='atelier_cache_v1';
+const _SESSION_KEY='atelier_session_v1';
+function _saveSession(){try{localStorage.setItem(_SESSION_KEY,JSON.stringify({view:S.view,userId:S.user?S.user.id:null,taAdminMode:S.taAdminMode}));}catch(e){}}
+function _clearSession(){try{localStorage.removeItem(_SESSION_KEY);}catch(e){}}
+function _restoreSession(){
+  try{
+    const s=JSON.parse(localStorage.getItem(_SESSION_KEY)||'null');
+    if(!s)return;
+    if(s.view==='admin'){S.view='admin';}
+    else if((s.view==='tailor'||s.view==='tailor-admin')&&s.userId){
+      const emp=S.employees.find(e=>String(e.id)===String(s.userId));
+      if(emp){S.user=emp;S.view=s.view;S.taAdminMode=!!s.taAdminMode;}
+    }
+  }catch(e){}
+}
 function _applyData(data){
   S.employees=data.employees||[];
   S.batches=data.batches||[];
@@ -2447,6 +2471,7 @@ function _applyData(data){
   }
 }
 function _renderAll(){
+  _restoreSession();
   $('loader').style.display='none';
   $('app').style.display='';
   render();
