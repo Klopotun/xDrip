@@ -742,8 +742,8 @@ function buildTailorAdmin(){
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0;padding:6px 16px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(210,215,240,.6);flex-shrink:0;position:sticky;top:57px;z-index:9">
-      <button onclick="S.taAdminMode=false;renderTailorAdminContent()" style="flex:1;padding:7px 10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;border-radius:10px 0 0 10px;background:${!S.taAdminMode?'var(--ac)':'var(--s2)'};color:${!S.taAdminMode?'#fff':'var(--dm)'}">Мои задачи</button>
-      <button onclick="S.taAdminMode=true;_adminTab='summary';renderTailorAdminContent()" style="flex:1;padding:7px 10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;border-radius:0 10px 10px 0;background:${S.taAdminMode?'var(--ac)':'var(--s2)'};color:${S.taAdminMode?'#fff':'var(--dm)'}">Администратор</button>
+      <button onclick="S.taAdminMode=false;_saveSession();renderTailorAdminContent()" style="flex:1;padding:7px 10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;border-radius:10px 0 0 10px;background:${!S.taAdminMode?'var(--ac)':'var(--s2)'};color:${!S.taAdminMode?'#fff':'var(--dm)'}">Мои задачи</button>
+      <button onclick="S.taAdminMode=true;_adminTab='summary';_saveSession();renderTailorAdminContent()" style="flex:1;padding:7px 10px;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;border-radius:0 10px 10px 0;background:${S.taAdminMode?'var(--ac)':'var(--s2)'};color:${S.taAdminMode?'#fff':'var(--dm)'}">Администратор</button>
     </div>
     <div class="tabs" id="tailor_tabs" style="top:103px">${S.taAdminMode?adminTabs:tailorTabs}</div>
     <div id="tailor_record"></div>
@@ -1609,16 +1609,16 @@ function buildAdminSummary(){
     ?S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
     :S.deliveries.filter(d=>normWeek(d.week)===normWeek(S.week));
   const filterDelivs=allFilterDelivs.filter(d=>!(d.is_defect==='TRUE'||d.is_defect===true));
-  // Defects filtered by created_at (not week) — works for both old and new data
-  const _wkMon=parseWk(S.week);
-  const _wkSun=new Date(_wkMon.getTime()+7*24*60*60*1000);
+  // Defects: week mode → week-string comparison (same as employee detail)
+  //          month mode → parse week date, fallback to created_at
   const filterDefectDelivs=S.deliveries.filter(d=>{
     if(!(d.is_defect==='TRUE'||d.is_defect===true))return false;
-    if(!d.created_at)return normWeek(d.week)===normWeek(S.week);
+    if(!isMonth) return normWeek(d.week)===normWeek(S.week);
+    const dw=parseWk(d.week||'');
+    if(dw.getFullYear()>2000) return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();
+    if(!d.created_at)return false;
     const cd=new Date(d.created_at);
-    if(isNaN(cd)||cd.getFullYear()<2020)return normWeek(d.week)===normWeek(S.week);
-    if(isMonth)return cd.getFullYear()===selDate.getFullYear()&&cd.getMonth()===selDate.getMonth();
-    return cd>=_wkMon&&cd<_wkSun;
+    return !isNaN(cd)&&cd.getFullYear()>=2020&&cd.getFullYear()===selDate.getFullYear()&&cd.getMonth()===selDate.getMonth();
   });
   const totItems=filterDelivs.reduce((s,d)=>s+Number(d.qty||0),0);
   const totMoney=filterDelivs.reduce((s,d)=>s+Number(d.total||0),0);
@@ -2513,16 +2513,16 @@ async function adminDelPayment(id){if(!confirm('Удалить выплату?')
 // ═══ INIT ════════════════════════════════════════════════════════
 const _CACHE_KEY='atelier_cache_v1';
 const _SESSION_KEY='atelier_session_v1';
-function _saveSession(){try{localStorage.setItem(_SESSION_KEY,JSON.stringify({view:S.view,userId:S.user?S.user.id:null,taAdminMode:S.taAdminMode}));}catch(e){}}
+function _saveSession(){try{localStorage.setItem(_SESSION_KEY,JSON.stringify({view:S.view,userId:S.user?S.user.id:null,taAdminMode:S.taAdminMode,adminTab:_adminTab}));}catch(e){}}
 function _clearSession(){try{localStorage.removeItem(_SESSION_KEY);}catch(e){}}
 function _restoreSession(){
   try{
     const s=JSON.parse(localStorage.getItem(_SESSION_KEY)||'null');
     if(!s)return;
-    if(s.view==='admin'){S.view='admin';}
+    if(s.view==='admin'){S.view='admin';if(s.adminTab)_adminTab=s.adminTab;}
     else if((s.view==='tailor'||s.view==='tailor-admin')&&s.userId){
       const emp=S.employees.find(e=>String(e.id)===String(s.userId));
-      if(emp){S.user=emp;S.view=s.view;S.taAdminMode=!!s.taAdminMode;}
+      if(emp){S.user=emp;S.view=s.view;S.taAdminMode=!!s.taAdminMode;if(s.adminTab)_adminTab=s.adminTab;}
     }
   }catch(e){}
 }
@@ -2548,7 +2548,7 @@ function _renderAll(){
   render();
   if(S.view==='tailor') renderTailorContent();
   if(S.view==='tailor-admin') renderTailorAdminContent();
-  if(S.view==='admin'){_adminTab='summary';renderAdminContent();}
+  if(S.view==='admin'){renderAdminContent();}
 }
 async function init(){
   // Show cached data instantly
