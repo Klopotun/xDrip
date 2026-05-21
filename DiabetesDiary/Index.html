@@ -366,6 +366,33 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
 }
 .zoom-btn:active { box-shadow: inset 2px 2px 6px var(--sd), inset -2px -2px 6px var(--sl); transform:scale(.92); }
 .zoom-lbl { font-size:12px; font-weight:700; color:var(--muted); min-width:30px; text-align:center; }
+
+/* ── Insight card (carb ratio + fasting sugar) ───────────────────────── */
+.insight-card {
+  border-radius:20px; padding:16px 18px; margin-top:14px;
+  background:var(--bg); box-shadow: 5px 5px 14px var(--sd), -5px -5px 14px var(--sl);
+}
+.insight-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:12px; }
+.insight-grid  { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.insight-cell  { text-align:center; }
+.ic-lbl { font-size:10px; color:var(--muted); font-weight:500; line-height:1.4; }
+.ic-val { font-size:15px; font-weight:800; color:var(--accent); margin-top:4px; }
+.insight-divider { border:none; border-top:1px solid rgba(163,175,200,.25); margin:12px 0; }
+.insight-fasting { display:flex; align-items:center; justify-content:space-between; }
+.if-lbl { font-size:12px; color:var(--muted); font-weight:500; }
+.if-val { font-size:18px; font-weight:800; color:var(--a-orange); }
+
+/* ── Ratio banner (insulin screen) ──────────────────────────────────── */
+.ratio-banner {
+  display:none; align-items:center; gap:12px;
+  border-radius:16px; padding:12px 16px; margin-bottom:14px;
+  background:var(--bg); box-shadow: 3px 3px 9px var(--sd), -3px -3px 9px var(--sl);
+  border-left:3px solid var(--accent);
+}
+.rb-icon  { font-size:20px; flex-shrink:0; }
+.rb-body  { flex:1; }
+.rb-title { font-size:11px; color:var(--muted); font-weight:600; margin-bottom:2px; }
+.rb-val   { font-size:16px; font-weight:800; color:var(--accent); }
 </style>
 </head>
 <body>
@@ -436,6 +463,30 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
   <button class="journal-btn" onclick="go('s-journal')">
     <span>📊</span> Журнал за сегодня
   </button>
+
+  <!-- Карбо-коэффициент + средний натощак -->
+  <div class="insight-card" id="insight-card" style="display:none">
+    <div class="insight-title">📊 Карбо-коэффициент · 30 дней</div>
+    <div class="insight-grid">
+      <div class="insight-cell">
+        <div class="ic-lbl">🌅 Утро<br>05–12</div>
+        <div class="ic-val" id="ic-m">—</div>
+      </div>
+      <div class="insight-cell">
+        <div class="ic-lbl">☀️ День<br>12–17</div>
+        <div class="ic-val" id="ic-d">—</div>
+      </div>
+      <div class="insight-cell">
+        <div class="ic-lbl">🌆 Вечер<br>17–23</div>
+        <div class="ic-val" id="ic-e">—</div>
+      </div>
+    </div>
+    <hr class="insight-divider">
+    <div class="insight-fasting">
+      <span class="if-lbl">🌙 Средний натощак (30 дн.)</span>
+      <span class="if-val" id="ic-f">—</span>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════ INSULIN ══════════════════════════════ -->
@@ -460,6 +511,15 @@ canvas#main-chart { width:100%; border-radius:12px; display:block; }
     </div>
     <div class="ins-name-row" id="ins-name-row">
       <input type="text" class="inp" id="ins-name" placeholder="Название инсулина" style="margin-top:12px">
+    </div>
+  </div>
+
+  <!-- Карбо-коэффициент для текущего времени суток -->
+  <div class="ratio-banner" id="ratio-banner">
+    <span class="rb-icon">💡</span>
+    <div class="rb-body">
+      <div class="rb-title" id="rb-title">Карбо-коэффициент</div>
+      <div class="rb-val"   id="rb-val">—</div>
     </div>
   </div>
 
@@ -695,6 +755,88 @@ function zoomChart(dir) {
   drawChart(_chartData);
 }
 
+/* ═══════════ INSIGHTS: CARB RATIO + FASTING SUGAR ════════════════════ */
+let _insightsData = null;
+let _insightsTs   = 0;
+
+function calcInsights(raw) {
+  const buckets = { m:[], d:[], e:[] };
+  for (const meal of raw.food) {
+    const he = parseFloat(meal.he);
+    if (!(he > 0)) continue;
+    const mealMs = new Date(meal.time).getTime();
+    const mealH  = new Date(meal.time).getHours();
+    let units = 0;
+    for (const inj of raw.insulin) {
+      if (inj.insulinType !== 'short') continue;
+      if (Math.abs(new Date(inj.time).getTime() - mealMs) <= 90 * 60000)
+        units += parseFloat(inj.units) || 0;
+    }
+    if (!(units > 0)) continue;
+    const r = units / he;
+    if (r < 0.3 || r > 12) continue;
+    if      (mealH >= 5  && mealH < 12) buckets.m.push(r);
+    else if (mealH >= 12 && mealH < 17) buckets.d.push(r);
+    else if (mealH >= 17 && mealH < 23) buckets.e.push(r);
+  }
+  function avg(a) { return a.length ? a.reduce((s,v) => s+v, 0) / a.length : null; }
+  const fVals = raw.sugar
+    .filter(s => { const h = new Date(s.time).getHours(); return h >= 5 && h < 10; })
+    .map(s => parseFloat(s.value)).filter(v => v > 0);
+  return {
+    morning: avg(buckets.m), day: avg(buckets.d), evening: avg(buckets.e),
+    fasting: avg(fVals),
+    total: buckets.m.length + buckets.d.length + buckets.e.length
+  };
+}
+
+function loadInsights() {
+  if (_insightsData && Date.now() - _insightsTs < 3600000) { renderInsights(_insightsData); return; }
+  const t  = new Date();
+  const eI = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999).toISOString();
+  const sI = new Date(t.getFullYear(), t.getMonth(), t.getDate() - 29, 0, 0, 0, 0).toISOString();
+  google.script.run
+    .withSuccessHandler(r => {
+      if (!r || !r.ok) return;
+      _insightsData = calcInsights(r);
+      _insightsTs   = Date.now();
+      renderInsights(_insightsData);
+    })
+    .withFailureHandler(() => {})
+    .getSummary30(sI, eI);
+}
+
+function renderInsights(ins) {
+  if (!ins) return;
+  function fmt(v, unit) { return v !== null ? v.toFixed(1) + ' ' + unit : '—'; }
+  const card = document.getElementById('insight-card');
+  if (card) {
+    document.getElementById('ic-m').textContent = fmt(ins.morning, 'ед/ХЕ');
+    document.getElementById('ic-d').textContent = fmt(ins.day,     'ед/ХЕ');
+    document.getElementById('ic-e').textContent = fmt(ins.evening, 'ед/ХЕ');
+    document.getElementById('ic-f').textContent = fmt(ins.fasting, 'ммоль/л');
+    if (ins.total >= 3) card.style.display = 'block';
+  }
+  _updateRatioBanner();
+}
+
+function _updateRatioBanner() {
+  const banner = document.getElementById('ratio-banner');
+  if (!banner || !_insightsData || S.insType !== 'short') { if (banner) banner.style.display='none'; return; }
+  const h = new Date().getHours();
+  let val = null, label = '';
+  if      (h >= 5  && h < 12) { val = _insightsData.morning; label = 'утро (05–12)'; }
+  else if (h >= 12 && h < 17) { val = _insightsData.day;     label = 'день (12–17)'; }
+  else if (h >= 17 && h < 23) { val = _insightsData.evening; label = 'вечер (17–23)'; }
+  if (val !== null) {
+    document.getElementById('rb-title').textContent = 'Карбо-коэффициент · ' + label;
+    document.getElementById('rb-val').textContent   = '~' + val.toFixed(1) + ' ед/ХЕ';
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 /* ═══════════ TIME ═════════════════════════════════════════════════════ */
 // All times use the device's own clock and timezone.
 function pad(n) { return String(n).padStart(2,'0'); }
@@ -777,6 +919,7 @@ function initMain() {
     days[n.getDay()]+', '+n.getDate()+' '+mons[n.getMonth()]+
     ' · '+pad(n.getHours())+':'+pad(n.getMinutes());
   loadMainData();
+  loadInsights();
 }
 
 function dayBoundsISO(localDateStr) {
@@ -862,6 +1005,7 @@ function selInsType(t) {
   } else {
     sug.classList.remove('visible');
   }
+  _updateRatioBanner();
 }
 function useSuggestedDose() {
   setUnits(S.insType === 'long' ? S.lastLong : S.lastShort);
