@@ -456,7 +456,7 @@ function fmtDT(s){
   if(!s)return '';
   try{
     const d=new Date(s);
-    if(isNaN(d))return String(s);
+    if(isNaN(d)||d.getFullYear()<2020)return '';
     const day=d.getDate(),mon=MO_GEN[d.getMonth()],yr=d.getFullYear();
     const h=String(d.getHours()).padStart(2,'0'),m=String(d.getMinutes()).padStart(2,'0');
     return `${day} ${mon} ${yr}, ${h}:${m}`;
@@ -920,12 +920,10 @@ function buildPositions(u){
     const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
     return b&&(b.is_position==='TRUE'||b.is_position===true);
   });
-  // Defect deliveries for position batches
+  // Defect deliveries — ALL batches for this tailor (position + sewing)
   const defectDelivs=S.deliveries.filter(d=>{
     if(String(d.tailor_id)!==String(u.id))return false;
-    if(!(d.is_defect==='TRUE'||d.is_defect===true))return false;
-    const b=S.batches.find(x=>String(x.id)===String(d.batch_id));
-    return b&&(b.is_position==='TRUE'||b.is_position===true);
+    return d.is_defect==='TRUE'||d.is_defect===true;
   });
 
   let html=`<div>
@@ -1605,6 +1603,7 @@ function buildAdminSummary(){
     if(!(d.is_defect==='TRUE'||d.is_defect===true))return false;
     if(!d.created_at)return normWeek(d.week)===normWeek(S.week);
     const cd=new Date(d.created_at);
+    if(isNaN(cd)||cd.getFullYear()<2020)return normWeek(d.week)===normWeek(S.week);
     if(isMonth)return cd.getFullYear()===selDate.getFullYear()&&cd.getMonth()===selDate.getMonth();
     return cd>=_wkMon&&cd<_wkSun;
   });

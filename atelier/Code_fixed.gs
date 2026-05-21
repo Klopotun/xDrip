@@ -208,7 +208,12 @@ function getRows(sheetName) {
     .filter(r => r[0] !== '' && r[0] !== null)
     .map(r => {
       var o = {};
-      hdrs.forEach((h,i) => { o[h] = r[i] === '' ? null : r[i]; });
+      hdrs.forEach((h,i) => {
+        var v = r[i];
+        // Sheets auto-converts ISO strings to Date objects; serialize back to ISO
+        if(v instanceof Date) v = Utilities.formatDate(v, 'UTC', "yyyy-MM-dd'T'HH:mm:ss'Z'");
+        o[h] = (v === '' || v === null || v === undefined) ? null : v;
+      });
       return o;
     });
 }
