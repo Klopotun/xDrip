@@ -244,6 +244,9 @@ select.inp{color:#1A1C2E}
 .ld-dot{width:8px;height:8px;border-radius:50%;background:var(--ac);animation:ld 1.2s ease-in-out infinite}
 .ld-dot:nth-child(2){animation-delay:.2s}.ld-dot:nth-child(3){animation-delay:.4s}
 @keyframes ld{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.ld-word{display:flex;gap:1px}
+.ld-letter{display:inline-block;animation:wave-letter 2.4s ease-in-out infinite;font-size:32px;font-weight:800;letter-spacing:1px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;background:linear-gradient(135deg,var(--ac) 0%,#7B9EFF 50%,var(--ac) 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+@keyframes wave-letter{0%,100%{transform:translateY(0) scale(1);opacity:.7}50%{transform:translateY(-6px) scale(1.05);opacity:1}}
 
 /* Sparkle milestone */
 @keyframes sparkle-pop{0%{transform:scale(0) rotate(0deg);opacity:1}100%{transform:scale(1.5) rotate(360deg);opacity:0}}
@@ -273,7 +276,9 @@ select.inp{color:#1A1C2E}
 </head>
 <body>
 <div id="loader" class="loader">
-  <div style="font-size:30px;font-weight:800;color:var(--ac);letter-spacing:-.5px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif">АТЕЛЬЕ</div>
+  <div class="ld-word">
+    <span class="ld-letter" style="animation-delay:0s">А</span><span class="ld-letter" style="animation-delay:.1s">Т</span><span class="ld-letter" style="animation-delay:.2s">Е</span><span class="ld-letter" style="animation-delay:.3s">Л</span><span class="ld-letter" style="animation-delay:.4s">Ь</span><span class="ld-letter" style="animation-delay:.5s">Е</span>
+  </div>
   <div class="ld-row"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
   <div style="font-size:12px;color:var(--dm);letter-spacing:.3px">загрузка…</div>
 </div>
@@ -1572,6 +1577,7 @@ function buildAdminSummary(){
       <span style="color:var(--dm)">сдано: <strong>${totItems} шт</strong></span>
       <span style="color:var(--dm)">сумма: <strong class="c-gn">${fmt(totMoney)} ₽</strong></span>
       <span style="color:var(--dm)">зависло: <strong style="color:${hangQty>0?'var(--red)':'var(--dm)'}">${hangQty} шт</strong></span>
+      ${totDefectItems>0?`<span style="color:var(--dm)">брак: <strong style="color:var(--orange)">${totDefectItems} шт</strong></span>`:''}
     </div>
   </div>`;
 
@@ -1637,6 +1643,7 @@ function buildAdminSummary(){
   allStats.forEach(function(e){
     const fired=e.is_active==='FALSE'||e.is_active===false;
     const hq=S.batches.filter(b=>String(b.tailor_id)===String(e.id)&&!b.is_position&&Number(b.qty_delivered||0)<Number(b.qty_total)).reduce((s,b)=>s+Number(b.qty_total)-(Number(b.qty_delivered)||0),0);
+    const empDefectQty=allFilterDelivs.filter(d=>String(d.tailor_id)===String(e.id)&&(d.is_defect==='TRUE'||d.is_defect===true)).reduce((s,d)=>s+Number(d.qty||0),0);
     html+=`<div class="card" style="cursor:pointer;${fired?'opacity:.5':''};margin-bottom:10px" onclick="openAdminDetail('${e.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
@@ -1652,6 +1659,7 @@ function buildAdminSummary(){
         <span style="color:var(--dm)">за неделю: <span class="mono">${fmt(e.accrued)} ₽</span></span>
         <span style="color:var(--dm)">выплачено: <span class="mono c-gn">${fmt(e.paid)} ₽</span></span>
         ${hq>0?`<span style="color:var(--dm)">зависло: <span class="mono" style="color:var(--red)">${hq} шт</span></span>`:''}
+        ${empDefectQty>0?`<span style="color:var(--dm)">брак: <span class="mono" style="color:var(--orange)">${empDefectQty} шт</span></span>`:''}
       </div>
     </div>`;
   });
@@ -2075,9 +2083,11 @@ function openEditBatchModal(batchId){
   _editBatchId=batchId;
   const b=S.batches.find(x=>String(x.id)===String(batchId));
   if(!b)return;
+  const _modalTarget=$('admin_modal')?'admin_modal':$('tailor_modal')?'tailor_modal':null;
+  if(!_modalTarget)return;
   const isPos=!!b.is_position;
   const otOpts=OT.map((o,i)=>`<option value="${i}" ${b.order_type===o.l?'selected':''}>${o.l}</option>`).join('');
-  setH('admin_modal',`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+  setH(_modalTarget,`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
     <div class="modal">
       <div class="modal-t">Редактировать пачку</div>
       <div class="fg"><label class="lbl">Изделие</label><input class="inp" type="text" id="eb_prod" value="${(b.product||'').replace(/"/g,'&quot;')}" autocomplete="off"></div>
@@ -2337,38 +2347,51 @@ async function submitReturn(){
   const defectDelivId=uid();
   const b=S.batches.find(x=>String(x.id)===String(_retBatchId));
   const tailorId=b?.tailor_id||'';
+  // Optimistic update — apply state changes before API call
+  const prevDeliveries=S.deliveries.map(x=>({...x}));
+  const prevBatches=S.batches.map(x=>({...x}));
+  const d=S.deliveries.find(x=>String(x.id)===String(_retDelivId));
+  const pricePerItem=_retMaxQty>0?Math.round(_retTotal/_retMaxQty):0;
+  const defectTotal=returnQty*pricePerItem;
+  if(d&&b){
+    if(isDefect){
+      if(returnQty===_retMaxQty){
+        S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(_retDelivId));
+      } else {
+        d.qty=_retMaxQty-returnQty;
+        d.total=Math.round(_retTotal*d.qty/_retMaxQty);
+      }
+      S.deliveries.push({id:defectDelivId,batch_id:_retBatchId,tailor_id:tailorId,qty:returnQty,total:defectTotal,week:NOW_WK,order_coeff:d.order_coeff||1,is_defect:true,created_at:new Date().toISOString()});
+      S.defectLogs.push({id:logId,batch_id:_retBatchId,tailor_id:tailorId,qty:returnQty,product:b.product||'',week:NOW_WK,created_at:new Date().toISOString()});
+    } else {
+      if(returnQty===_retMaxQty){
+        S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(_retDelivId));
+      } else {
+        d.qty=_retMaxQty-returnQty;
+        d.total=Math.round(_retTotal*d.qty/_retMaxQty);
+      }
+      b.qty_delivered=Math.max(0,Number(b.qty_delivered||0)-returnQty);
+    }
+  }
+  closeModal();
+  renderAdminContent();
   try{
     await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect,logId,tailorId,defectDelivId});
-    const d=S.deliveries.find(x=>String(x.id)===String(_retDelivId));
-    if(d&&b){
-      if(isDefect){
-        // Keep items on tailor's record as defect delivery
-        const pricePerItem=_retMaxQty>0?Math.round(_retTotal/_retMaxQty):0;
-        const defectTotal=returnQty*pricePerItem;
-        if(returnQty===_retMaxQty){
-          S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(_retDelivId));
-        } else {
-          d.qty=_retMaxQty-returnQty;
-          d.total=Math.round(_retTotal*d.qty/_retMaxQty);
-        }
-        S.deliveries.push({id:defectDelivId,batch_id:_retBatchId,tailor_id:tailorId,qty:returnQty,total:defectTotal,week:d.week||b.week||'',order_coeff:d.order_coeff||1,is_defect:true,created_at:new Date().toISOString()});
-        S.defectLogs.push({id:logId,batch_id:_retBatchId,tailor_id:tailorId,qty:returnQty,product:b.product||'',week:b.week||'',created_at:new Date().toISOString()});
-        toast('🗑 Брак зафиксирован');
-        openDefectPriceModal(defectDelivId,b.product||'',returnQty,_retMaxQty>0?Math.round(_retTotal/_retMaxQty):0);
-      } else {
-        if(returnQty===_retMaxQty){
-          S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(_retDelivId));
-        } else {
-          d.qty=_retMaxQty-returnQty;
-          d.total=Math.round(_retTotal*d.qty/_retMaxQty);
-        }
-        b.qty_delivered=Math.max(0,Number(b.qty_delivered||0)-returnQty);
-        toast('↩ Возвращено в работу');
-        closeModal();
-        renderAdminContent();
-      }
+    if(isDefect){
+      toast('🗑 Брак зафиксирован');
+      openDefectPriceModal(defectDelivId,b?.product||'',returnQty,pricePerItem);
+    } else {
+      toast('↩ Возвращено в работу');
     }
-  }catch(e){alert(e.message);}
+  }catch(e){
+    // Revert on error
+    S.deliveries=prevDeliveries;
+    S.batches.forEach((x,i)=>{const p=prevBatches.find(p=>String(p.id)===String(x.id));if(p)Object.assign(x,p);});
+    S.defectLogs=S.defectLogs.filter(x=>String(x.id)!==String(logId));
+    renderAdminContent();
+    alert(e.message);
+    return;
+  }
 }
 function openDefectPriceModal(defectDelivId,product,qty,pricePerItem){
   setH('admin_modal',`<div class="modal-bg">
@@ -2407,54 +2430,61 @@ async function adminDelDayLog(id){if(!confirm('Удалить?'))return;try{awai
 async function adminDelPayment(id){if(!confirm('Удалить выплату?'))return;try{await api('delPayment',{id});S.payments=S.payments.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
 
 // ═══ INIT ════════════════════════════════════════════════════════
+const _CACHE_KEY='atelier_cache_v1';
+function _applyData(data){
+  S.employees=data.employees||[];
+  S.batches=data.batches||[];
+  S.deliveries=data.deliveries||[];
+  S.dayLogs=data.dayLogs||[];
+  S.payments=data.payments||[];
+  S.products=data.products||[];
+  S.adjustments=data.adjustments||[];
+  S.defectLogs=data.defectLogs||[];
+  S.priceLogs=data.priceLogs||[];
+  const dl=document.getElementById('prod_list');
+  if(dl&&S.products.length){
+    dl.innerHTML=S.products.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join('');
+  }
+}
+function _renderAll(){
+  $('loader').style.display='none';
+  $('app').style.display='';
+  render();
+  if(S.view==='tailor') renderTailorContent();
+  if(S.view==='tailor-admin') renderTailorAdminContent();
+  if(S.view==='admin'){_adminTab='summary';renderAdminContent();}
+}
 async function init(){
+  // Show cached data instantly
+  try{
+    const cached=JSON.parse(localStorage.getItem(_CACHE_KEY)||'null');
+    if(cached&&cached.employees&&cached.employees.length){
+      _applyData(cached);
+      _renderAll();
+    }
+  }catch(e){}
+  // Fetch fresh data in background
   try{
     const data=await api('getAll');
-    S.employees=data.employees||[];
-    S.batches=data.batches||[];
-    S.deliveries=data.deliveries||[];
-    S.dayLogs=data.dayLogs||[];
-    S.payments=data.payments||[];
-    S.products=data.products||[];
-    S.adjustments=data.adjustments||[];
-    S.defectLogs=data.defectLogs||[];
-    S.priceLogs=data.priceLogs||[];
-    // Build datalist once — no DOM changes during typing
-    const dl=document.getElementById('prod_list');
-    if(dl&&S.products.length){
-      dl.innerHTML=S.products.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join('');
-    }
-    $('loader').style.display='none';
-    $('app').style.display='';
-    render();
-    // After tailor render, fill content
-    if(S.view==='tailor') renderTailorContent();
-    if(S.view==='admin'){_adminTab='summary';renderAdminContent();}
+    localStorage.setItem(_CACHE_KEY,JSON.stringify(data));
+    _applyData(data);
+    _renderAll();
   }catch(e){
-    $('loader').innerHTML=`<div style="max-width:360px;padding:24px;background:#fff;border:none;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:12px;text-align:center">
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;font-size:22px;font-weight:700;color:var(--red);margin-bottom:12px">Ошибка загрузки</div>
-      <div style="font-size:14px;color:var(--dm)">${e.message}</div>
-      <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#e53935;border:none;color:#fff;border-radius:8px;cursor:pointer">Перезагрузить</button>
-    </div>`;
+    if($('loader').style.display!=='none'){
+      $('loader').innerHTML=`<div style="max-width:360px;padding:24px;background:#fff;border:none;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:12px;text-align:center">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;font-size:22px;font-weight:700;color:var(--red);margin-bottom:12px">Ошибка загрузки</div>
+        <div style="font-size:14px;color:var(--dm)">${e.message}</div>
+        <button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#e53935;border:none;color:#fff;border-radius:8px;cursor:pointer">Перезагрузить</button>
+      </div>`;
+    }
   }
 }
 async function syncData(){
   try{
     showSpinner('Синхронизация…');
     const data=await api('getAll');
-    S.employees=data.employees||[];
-    S.batches=data.batches||[];
-    S.deliveries=data.deliveries||[];
-    S.dayLogs=data.dayLogs||[];
-    S.payments=data.payments||[];
-    S.products=data.products||[];
-    S.adjustments=data.adjustments||[];
-    S.defectLogs=data.defectLogs||[];
-    S.priceLogs=data.priceLogs||[];
-    const dl=document.getElementById('prod_list');
-    if(dl&&S.products.length){
-      dl.innerHTML=S.products.map(p=>`<option value="${p.name.replace(/"/g,'&quot;')}"></option>`).join('');
-    }
+    localStorage.setItem(_CACHE_KEY,JSON.stringify(data));
+    _applyData(data);
     hideSpinner();
     if(S.view==='tailor') renderTailorContent();
     else if(S.view==='tailor-admin') renderTailorAdminContent();

@@ -133,8 +133,9 @@ function dispatch(req) {
           updRow('_deliveries', req.delivId, {qty:remQty, total:remTotal});
         }
         // Create defect delivery (batch.qty_delivered stays the same)
-        addRow('_deliveries',{id:req.defectDelivId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,total:defectTotal,week:deliv.week||batch.week||'',order_coeff:deliv.order_coeff||1,is_defect:'TRUE',created_at:new Date().toISOString()});
-        addRow('_defect_logs',{id:req.logId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,product:batch.product||'',week:batch.week||'',created_at:new Date().toISOString()});
+        var nowWk=wkL(getMon());
+        addRow('_deliveries',{id:req.defectDelivId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,total:defectTotal,week:nowWk,order_coeff:deliv.order_coeff||1,is_defect:'TRUE',created_at:new Date().toISOString()});
+        addRow('_defect_logs',{id:req.logId,batch_id:req.batchId,tailor_id:req.tailorId,qty:returnQty,product:batch.product||'',week:nowWk,created_at:new Date().toISOString()});
         return {ok:true, pricePerItem:pricePerItem};
       } else {
         // Return to work: reduce delivery, reduce batch.qty_delivered
