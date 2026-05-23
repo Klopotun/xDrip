@@ -243,12 +243,77 @@ function getSummary(dateStr, startISO, endISO) {
   } catch(e) { return { ok:false, error: e && e.stack ? e.stack : String(e) }; }
 }
 
+// ── Independent insights cache (NOT version-keyed, 6h TTL) ──────────────────
+
+function _getICache(key) {
+  const c = _c();
+  if (!c) return null;
+  try { const r = c.get(key); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function _setICache(key, data) {
+  const c = _c();
+  if (!c) return;
+  try { c.put(key, JSON.stringify(data), 21600); } catch(e) {}
+}
+
+// ── API: Carb-ratio + fasting sugar insights (server-side, cached 6h) ────────
+
+function calcInsightsServer(tzOffsetMin) {
+  const cKey = 'ins1_' + (tzOffsetMin | 0);
+  const hit  = _getICache(cKey);
+  if (hit) return hit;
+
+  const now     = new Date();
+  const endISO  = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999).toISOString();
+  const startISO= new Date(now.getFullYear(), now.getMonth(), now.getDate()-29, 0,0,0,0).toISOString();
+  const raw     = getSummary30(startISO, endISO);
+  if (!raw.ok) return { morning:null, day:null, evening:null, fasting:null, total:0 };
+
+  function lh(iso) {
+    return new Date(new Date(iso).getTime() - (tzOffsetMin|0) * 60000).getUTCHours();
+  }
+
+  const bk = { m:[], d:[], e:[] };
+  for (const meal of raw.food) {
+    const he = Number(meal.he);
+    if (!(he > 0)) continue;
+    const mealMs = new Date(meal.time).getTime();
+    const mealH  = lh(meal.time);
+    let units = 0;
+    for (const inj of raw.insulin) {
+      if (inj.insulinType !== 'short') continue;
+      if (Math.abs(new Date(inj.time).getTime() - mealMs) <= 90 * 60000)
+        units += Number(inj.units) || 0;
+    }
+    if (!(units > 0)) continue;
+    const r = units / he;
+    if (r < 0.3 || r > 12) continue;
+    if      (mealH >= 5  && mealH < 12) bk.m.push(r);
+    else if (mealH >= 12 && mealH < 17) bk.d.push(r);
+    else if (mealH >= 17 && mealH < 23) bk.e.push(r);
+  }
+
+  function avg(a) { return a.length ? a.reduce((s,v) => s+v, 0)/a.length : null; }
+  const fv = raw.sugar
+    .filter(s => { const h = lh(s.time); return h >= 5 && h < 10; })
+    .map(s => Number(s.value)).filter(v => v > 0);
+
+  const result = {
+    morning: avg(bk.m), day: avg(bk.d), evening: avg(bk.e),
+    fasting: avg(fv),
+    total: bk.m.length + bk.d.length + bk.e.length
+  };
+  _setICache(cKey, result);
+  return result;
+}
+
 // ── API: Combined main-screen data — one round-trip instead of two ───────────
 
-function getMainScreenData(dateStr, startISO, endISO) {
+function getMainScreenData(dateStr, startISO, endISO, tzOffsetMin) {
   return {
-    summary: getSummary(dateStr, startISO, endISO),
-    pending: getPendingSugars()
+    summary:  getSummary(dateStr, startISO, endISO),
+    pending:  getPendingSugars(),
+    insights: calcInsightsServer(tzOffsetMin)
   };
 }
 

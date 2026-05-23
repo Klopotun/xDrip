@@ -791,19 +791,8 @@ function calcInsights(raw) {
 }
 
 function loadInsights() {
-  if (_insightsData && Date.now() - _insightsTs < 3600000) { renderInsights(_insightsData); return; }
-  const t  = new Date();
-  const eI = new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999).toISOString();
-  const sI = new Date(t.getFullYear(), t.getMonth(), t.getDate() - 29, 0, 0, 0, 0).toISOString();
-  google.script.run
-    .withSuccessHandler(r => {
-      if (!r || !r.ok) return;
-      _insightsData = calcInsights(r);
-      _insightsTs   = Date.now();
-      renderInsights(_insightsData);
-    })
-    .withFailureHandler(() => {})
-    .getSummary30(sI, eI);
+  // Insights arrive as part of getMainScreenData; just re-render if ready
+  if (_insightsData) renderInsights(_insightsData);
 }
 
 function renderInsights(ins) {
@@ -928,17 +917,32 @@ function dayBoundsISO(localDateStr) {
            e: new Date(yr,mo-1,dy,23,59,59,999).toISOString() };
 }
 
-// Single round-trip: summary for chart + pending reminders
+// Single round-trip: summary + pending + insights (insights also cached in localStorage)
 function loadMainData() {
   drawChart({insulin:[],food:[],sugar:[]});
+
+  // Show insights instantly from localStorage while server loads
+  try {
+    const lc = JSON.parse(localStorage.getItem('_ins') || 'null');
+    if (lc && Date.now() - (lc.ts||0) < 43200000) {
+      _insightsData = lc.d; _insightsTs = lc.ts;
+      renderInsights(_insightsData);
+    }
+  } catch(e) {}
+
   const _d = todayLocal(), _b = dayBoundsISO(_d);
+  const tz = new Date().getTimezoneOffset();
   google.script.run
     .withSuccessHandler(r => {
       if (!r) return;
       if (r.summary && r.summary.ok) {
         drawChart(r.summary);
-        // Populate journal cache for today so the journal opens instantly
         _jCache[_d] = { data: r.summary, ts: Date.now() };
+      }
+      if (r.insights) {
+        _insightsData = r.insights; _insightsTs = Date.now();
+        renderInsights(_insightsData);
+        try { localStorage.setItem('_ins', JSON.stringify({d:r.insights, ts:Date.now()})); } catch(e) {}
       }
       const p = r.pending;
       if (p && p.ok && p.pending && p.pending.length) {
@@ -951,7 +955,7 @@ function loadMainData() {
       }
     })
     .withFailureHandler(() => {})
-    .getMainScreenData(_d, _b.s, _b.e);
+    .getMainScreenData(_d, _b.s, _b.e, tz);
 }
 function onReminderClick() { S.sugType = 'after'; go('s-sug'); }
 
