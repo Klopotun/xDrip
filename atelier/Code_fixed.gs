@@ -261,14 +261,24 @@ function withLock(fn) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(15000);
+    _clearDataCache();
     return fn();
   } finally {
     lock.releaseLock();
   }
 }
 
+function _clearDataCache(){
+  try{ CacheService.getScriptCache().remove('allData'); }catch(e){}
+}
+
 function getAllData() {
-  return {
+  var sc = CacheService.getScriptCache();
+  try{
+    var hit = sc.get('allData');
+    if(hit) return JSON.parse(hit);
+  }catch(e){}
+  var data = {
     employees:   getRows('_employees'),
     batches:     getRows('_batches'),
     deliveries:  getRows('_deliveries'),
@@ -279,6 +289,8 @@ function getAllData() {
     defectLogs:  getRows('_defect_logs'),
     priceLogs:   getRows('_price_logs')
   };
+  try{ sc.put('allData', JSON.stringify(data), 60); }catch(e){}
+  return data;
 }
 
 function uid() {

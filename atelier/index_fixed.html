@@ -1520,6 +1520,7 @@ async function submitDeliver(isPos){
   if(res!==null){
     S.deliveries.push(row);b.qty_delivered=newQty;
     toast('✓ Сдача записана');
+    _saveDataCache();
     renderTailorContent();
     // Rolling counter + milestone sparkle
     setTimeout(()=>{
@@ -1539,7 +1540,7 @@ async function submitDays(empId,empType){
   if(!days||days<=0){alert('Укажи количество дней');return;}
   const row={id:uid(),tailor_id:empId,days,deductions:ded,week:S.week,created_at:new Date().toISOString()};
   const res=await safeApi('addDayLog',{row});
-  if(res!==null){S.dayLogs.push(row);toast('✓ Записано');renderTailorContent();}
+  if(res!==null){S.dayLogs.push(row);toast('✓ Записано');_saveDataCache();renderTailorContent();}
 }
 
 async function delDayLog(id,empType){
@@ -2035,7 +2036,7 @@ async function submitPay(empId){
   const note=($('pay_note')?.value||'').trim();
   if(!amt||amt<=0){alert('Укажи сумму');return;}
   const row={id:uid(),tailor_id:empId,amount:amt,note,week:S.week,date:new Date().toISOString().slice(0,10),created_at:new Date().toISOString()};
-  try{await api('addPayment',{row});S.payments.push(row);closeModal();toast('✓ Выплата добавлена');renderAdminContent();}catch(e){alert(e.message);if(btn){btn.disabled=false;btn.textContent='Выплатить';}}
+  try{await api('addPayment',{row});S.payments.push(row);closeModal();toast('✓ Выплата добавлена');_saveDataCache();renderAdminContent();}catch(e){alert(e.message);if(btn){btn.disabled=false;btn.textContent='Выплатить';}}
 }
 
 // BATCH MODAL — full autocomplete working
@@ -2154,7 +2155,7 @@ async function submitBatch(){
     await api('addBatch',{row});
     S.batches.push(row);
     closeModal();
-    toast('✓ Пачка добавлена');
+    toast('✓ Пачка добавлена');_saveDataCache();
     renderAdminContent();
   }catch(e){alert(e.message);}
 }
@@ -2459,6 +2460,7 @@ async function submitReturn(){
   renderAdminContent();
   try{
     await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect,logId,tailorId,defectDelivId});
+    _saveDataCache();
     if(isDefect){
       toast('🗑 Брак зафиксирован');
       openDefectPriceModal(defectDelivId,b?.product||'',returnQty,pricePerItem);
@@ -2552,18 +2554,31 @@ function _renderAll(){
   if(S.view==='tailor-admin') renderTailorAdminContent();
   if(S.view==='admin'){renderAdminContent();}
 }
+const _CACHE_TTL=2*60*1000; // 2 minutes — skip background getAll if cache is this fresh
+function _saveDataCache(){
+  try{
+    const snap={_ts:Date.now(),employees:S.employees,batches:S.batches,deliveries:S.deliveries,
+      dayLogs:S.dayLogs,payments:S.payments,products:S.products,
+      adjustments:S.adjustments,defectLogs:S.defectLogs,priceLogs:S.priceLogs};
+    localStorage.setItem(_CACHE_KEY,JSON.stringify(snap));
+  }catch(e){}
+}
 async function init(){
   // Show cached data instantly
+  let cacheAge=Infinity;
   try{
     const cached=JSON.parse(localStorage.getItem(_CACHE_KEY)||'null');
     if(cached&&cached.employees&&cached.employees.length){
+      cacheAge=cached._ts?(Date.now()-cached._ts):Infinity;
       _applyData(cached);
       _renderAll();
+      if(cacheAge<_CACHE_TTL)return; // cache is fresh — no need to refetch
     }
   }catch(e){}
   // Fetch fresh data in background
   try{
     const data=await api('getAll');
+    data._ts=Date.now();
     localStorage.setItem(_CACHE_KEY,JSON.stringify(data));
     _applyData(data);
     _renderAll();
@@ -2581,6 +2596,7 @@ async function syncData(){
   try{
     showSpinner('Синхронизация…');
     const data=await api('getAll');
+    data._ts=Date.now();
     localStorage.setItem(_CACHE_KEY,JSON.stringify(data));
     _applyData(data);
     hideSpinner();
