@@ -1611,11 +1611,23 @@ function buildAdminSummary(){
     ?S.deliveries.filter(d=>{const dw=parseWk(d.week||'');return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();})
     :S.deliveries.filter(d=>normWeek(d.week)===normWeek(S.week));
   const filterDelivs=allFilterDelivs.filter(d=>!(d.is_defect==='TRUE'||d.is_defect===true));
-  // Defects: week mode → week-string comparison (same as employee detail)
+  // Defects: week mode → week-string OR created_at-based week fallback
   //          month mode → parse week date, fallback to created_at
+  const _selWkDate=parseWk(S.week);
   const filterDefectDelivs=S.deliveries.filter(d=>{
     if(!(d.is_defect==='TRUE'||d.is_defect===true))return false;
-    if(!isMonth) return normWeek(d.week)===normWeek(S.week);
+    if(!isMonth){
+      if(normWeek(d.week)===normWeek(S.week))return true;
+      // fallback: check created_at falls within the selected week
+      if(d.created_at){
+        const cd=new Date(d.created_at);
+        if(!isNaN(cd)&&cd.getFullYear()>=2020){
+          const cdMon=getMon(cd);
+          return wkL(cdMon)===normWeek(S.week);
+        }
+      }
+      return false;
+    }
     const dw=parseWk(d.week||'');
     if(dw.getFullYear()>2000) return dw.getFullYear()===selDate.getFullYear()&&dw.getMonth()===selDate.getMonth();
     if(!d.created_at)return false;
@@ -2459,7 +2471,7 @@ async function submitReturn(){
   closeModal();
   renderAdminContent();
   try{
-    await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect,logId,tailorId,defectDelivId});
+    await api('returnDelivery',{delivId:_retDelivId,batchId:_retBatchId,returnQty,isDefect,logId,tailorId,defectDelivId,nowWk:NOW_WK});
     _saveDataCache();
     if(isDefect){
       toast('🗑 Брак зафиксирован');
@@ -2520,6 +2532,16 @@ const _SESSION_KEY='atelier_session_v1';
 function _saveSession(){try{localStorage.setItem(_SESSION_KEY,JSON.stringify({view:S.view,userId:S.user?S.user.id:null,taAdminMode:S.taAdminMode,adminTab:_adminTab}));}catch(e){}}
 function _clearSession(){try{localStorage.removeItem(_SESSION_KEY);}catch(e){}}
 function _restoreSession(){
+  // If already in an active view (e.g. after background getAll re-render), just refresh
+  // the S.user reference from fresh employee data — do NOT touch taAdminMode or view.
+  if(S.view!=='home'){
+    if(S.user){
+      const freshEmp=S.employees.find(e=>String(e.id)===String(S.user.id));
+      if(freshEmp)S.user=freshEmp;
+    }
+    return;
+  }
+  // Not logged in yet — restore from localStorage
   try{
     const s=JSON.parse(localStorage.getItem(_SESSION_KEY)||'null');
     if(!s)return;
