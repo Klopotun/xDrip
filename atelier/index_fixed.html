@@ -730,9 +730,9 @@ function buildTailorAdmin(){
     :`<button class="tab ${!S.taAdminMode&&S.tailorTab==='batches'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='batches';renderTailorAdminContent()">Мои дни</button>
       <button class="tab ${!S.taAdminMode&&S.tailorTab==='delivered'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='delivered';renderTailorAdminContent()">История</button>
       <button class="tab ${!S.taAdminMode&&S.tailorTab==='salary'?'on':''}" onclick="S.taAdminMode=false;S.tailorTab='salary';renderTailorAdminContent()">Зарплата</button>`;
-  const adminTabs=`<button class="tab ${S.taAdminMode&&_adminTab==='summary'?'on':''}" onclick="S.taAdminMode=true;_adminTab='summary';renderTailorAdminContent()">Сводка</button>
-    <button class="tab ${S.taAdminMode&&_adminTab==='employees'?'on':''}" onclick="S.taAdminMode=true;_adminTab='employees';renderTailorAdminContent()">Сотрудники</button>
-    <button class="tab ${S.taAdminMode&&_adminTab==='catalog'?'on':''}" onclick="S.taAdminMode=true;_adminTab='catalog';renderTailorAdminContent()">Каталог</button>`;
+  const adminTabs=`<button class="tab ${S.taAdminMode&&_adminTab==='summary'?'on':''}" onclick="S.taAdminMode=true;_adminTab='summary';_saveSession();renderTailorAdminContent()">Сводка</button>
+    <button class="tab ${S.taAdminMode&&_adminTab==='employees'?'on':''}" onclick="S.taAdminMode=true;_adminTab='employees';_saveSession();renderTailorAdminContent()">Сотрудники</button>
+    <button class="tab ${S.taAdminMode&&_adminTab==='catalog'?'on':''}" onclick="S.taAdminMode=true;_adminTab='catalog';_saveSession();renderTailorAdminContent()">Каталог</button>`;
   return`<div class="scr">
     <div class="hdr">
       <div><div class="hdr-t">${u.name} ${u.surname}</div><div class="hdr-sub">неделя с ${normWeek(S.week)}</div></div>
@@ -2270,11 +2270,11 @@ async function submitEmp(editId){
   closeModal();
   if(isNew){
     const res=await safeApi('addEmployee',{row});
-    if(res!==null){S.employees.push(row);toast(`✓ ${name} добавлена`);renderAdminContent();}
+    if(res!==null){S.employees.push(row);_saveDataCache();toast(`✓ ${name} добавлена`);renderAdminContent();}
   } else {
     const updates={name,surname,phone,password,tailor_type:type,rate,is_admin:isAdm};
     const res=await safeApi('updEmployee',{id:editId,updates});
-    if(res!==null){const i=S.employees.findIndex(e=>String(e.id)===String(editId));if(i>=0)S.employees[i]={...S.employees[i],...updates};toast('✓ Сохранено');renderAdminContent();}
+    if(res!==null){const i=S.employees.findIndex(e=>String(e.id)===String(editId));if(i>=0)S.employees[i]={...S.employees[i],...updates};_saveDataCache();toast('✓ Сохранено');renderAdminContent();}
   }
 }
 
@@ -2503,15 +2503,16 @@ async function submitDefectPrice(defectDelivId,qty){
     await api('updDelivery',{id:defectDelivId,updates:{total:newTotal}});
     const d=S.deliveries.find(x=>String(x.id)===String(defectDelivId));
     if(d)d.total=newTotal;
+    _saveDataCache();
     closeModal();
     toast('✓ Цена скорректирована');
     renderAdminContent();
   }catch(e){alert(e.message);}
 }
-async function adminDelBatch(id){if(!confirm('Удалить пачку?'))return;try{await api('delBatch',{id});S.batches=S.batches.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
-async function adminDelDelivery(id,batchId,newQty){if(!confirm('Удалить сдачу?'))return;try{await api('delDelivery',{id,batchId,newQtyDelivered:Math.max(0,newQty)});S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(id));const b=S.batches.find(x=>String(x.id)===String(batchId));if(b)b.qty_delivered=Math.max(0,newQty);renderAdminContent();}catch(e){alert(e.message);}}
-async function adminDelDayLog(id){if(!confirm('Удалить?'))return;try{await api('delDayLog',{id});S.dayLogs=S.dayLogs.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
-async function adminDelPayment(id){if(!confirm('Удалить выплату?'))return;try{await api('delPayment',{id});S.payments=S.payments.filter(x=>String(x.id)!==String(id));renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelBatch(id){if(!confirm('Удалить пачку?'))return;try{await api('delBatch',{id});S.batches=S.batches.filter(x=>String(x.id)!==String(id));_saveDataCache();renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelDelivery(id,batchId,newQty){if(!confirm('Удалить сдачу?'))return;try{await api('delDelivery',{id,batchId,newQtyDelivered:Math.max(0,newQty)});S.deliveries=S.deliveries.filter(x=>String(x.id)!==String(id));const b=S.batches.find(x=>String(x.id)===String(batchId));if(b)b.qty_delivered=Math.max(0,newQty);_saveDataCache();renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelDayLog(id){if(!confirm('Удалить?'))return;try{await api('delDayLog',{id});S.dayLogs=S.dayLogs.filter(x=>String(x.id)!==String(id));_saveDataCache();renderAdminContent();}catch(e){alert(e.message);}}
+async function adminDelPayment(id){if(!confirm('Удалить выплату?'))return;try{await api('delPayment',{id});S.payments=S.payments.filter(x=>String(x.id)!==String(id));_saveDataCache();renderAdminContent();}catch(e){alert(e.message);}}
 
 // ═══ INIT ════════════════════════════════════════════════════════
 const _CACHE_KEY='atelier_cache_v1';
